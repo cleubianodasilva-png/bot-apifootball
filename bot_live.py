@@ -456,7 +456,6 @@ def gerar_motivo(mercado, stats, sh, sa, fav_final, cantos_atual=0):
     red_a        = stats.get("red_cards_a", 0) if stats else 0
     posse_h_raw  = stats.get("posse_h", 0.0) if stats else 0.0
     posse_a_raw  = stats.get("posse_a", 0.0) if stats else 0.0
-    # Normaliza posse (ESPN pode vir como 62.4 ou 0.624)
     posse_h = int(round(float(posse_h_raw) * 100)) if float(posse_h_raw) <= 1 else int(round(float(posse_h_raw)))
     posse_a = int(round(float(posse_a_raw) * 100)) if float(posse_a_raw) <= 1 else int(round(float(posse_a_raw)))
     total_chutes = chutes_h + chutes_a
@@ -466,59 +465,91 @@ def gerar_motivo(mercado, stats, sh, sa, fav_final, cantos_atual=0):
     if not tem_dados:
         return "Estatísticas não disponíveis para esta liga"
 
+    # Labels com identidade: Favorito(Casa/Fora) ou Zebra(Casa/Fora)
+    if fav_final == "h":
+        fav_label  = "Favorito (Casa)"
+        zebra_label = "Zebra (Fora)"
+        fav_chutes = chutes_h; fav_gol = chutes_gol_h
+        adv_chutes = chutes_a; adv_gol = chutes_gol_a
+    elif fav_final == "a":
+        fav_label  = "Favorito (Fora)"
+        zebra_label = "Zebra (Casa)"
+        fav_chutes = chutes_a; fav_gol = chutes_gol_a
+        adv_chutes = chutes_h; adv_gol = chutes_gol_h
+    else:
+        fav_label  = "Casa"
+        zebra_label = "Fora"
+        fav_chutes = chutes_h; fav_gol = chutes_gol_h
+        adv_chutes = chutes_a; adv_gol = chutes_gol_a
+
+    # Contexto do placar
+    jogo_aberto  = sh == 0 and sa == 0
+    fav_perdendo = (fav_final == "h" and sh < sa) or (fav_final == "a" and sa < sh)
+    fav_ganhando = (fav_final == "h" and sh > sa) or (fav_final == "a" and sa > sh)
+    # Zebra dominando nos dados
+    zebra_dominando = adv_chutes > fav_chutes
+
     if red_h > 0 or red_a > 0:
         vermelho = " | 🟥 Vermelho: " + ("Casa" if red_h > 0 else "Fora")
     else:
         vermelho = ""
 
-    # Posse dominante (diferença >= 15%)
     posse_txt = ""
     if posse_h >= 55:
         posse_txt = f", Casa com {posse_h}% de posse"
     elif posse_a >= 55:
         posse_txt = f", Fora com {posse_a}% de posse"
 
-    # Ambos chutando muito no alvo
+    # ── JOGO ABERTO (0x0) ─────────────────────────────────────────
+    if jogo_aberto:
+        if chutes_gol_h >= 3 and chutes_gol_a >= 3:
+            return f"Jogo aberto com grandes chances de gol dos dois lados — {chutes_gol_h} finalizações de Casa, {chutes_gol_a} de Fora{posse_txt}{vermelho}"
+        if fav_chutes >= 8 and fav_gol >= 3:
+            return f"Jogo aberto, {fav_label} criando grandes chances — {fav_chutes} chutes, {fav_gol} no alvo{posse_txt}{vermelho}"
+        if zebra_dominando and adv_chutes >= 6 and adv_gol >= 2:
+            return f"Jogo aberto, {zebra_label} surpreendendo — {adv_chutes} chutes, {adv_gol} no alvo{posse_txt}{vermelho}"
+        if total_chutes >= 12:
+            return f"Jogo aberto e bastante movimentado — {chutes_h} chutes de Casa, {chutes_a} de Fora, sem gols ainda{posse_txt}{vermelho}"
+        if fav_chutes > adv_chutes and fav_gol > 0:
+            return f"Jogo aberto, {fav_label} dominando com {fav_chutes} chutes ({fav_gol} no alvo){posse_txt}{vermelho}"
+        return f"Jogo aberto, ambas buscando o primeiro gol — {chutes_h} chutes x {chutes_a}{posse_txt}{vermelho}"
+
+    # ── FAVORITO PERDENDO ─────────────────────────────────────────
+    if fav_perdendo:
+        if fav_chutes >= 8 and fav_gol >= 3:
+            return f"Grandes chances do {fav_label} empatar — chegando constantemente com {fav_chutes} chutes, {fav_gol} no alvo{posse_txt}{vermelho}"
+        if fav_chutes >= 6 and fav_gol >= 2:
+            return f"{fav_label} em busca do empate, criando boas chances — {fav_chutes} chutes, {fav_gol} no alvo{posse_txt}{vermelho}"
+        if zebra_dominando and adv_chutes >= 8:
+            return f"{zebra_label} dominando e ameaçando ampliar — {adv_chutes} chutes, {adv_gol} no alvo{posse_txt}{vermelho}"
+        if fav_chutes > adv_chutes:
+            return f"{fav_label} em busca do empate, pressionando com {fav_chutes} chutes x {adv_chutes}{posse_txt}{vermelho}"
+        return f"{fav_label} perdendo e tentando reagir — {fav_chutes} chutes x {adv_chutes} da {zebra_label}{posse_txt}{vermelho}"
+
+    # ── FAVORITO GANHANDO ─────────────────────────────────────────
+    if fav_ganhando:
+        if adv_chutes >= 8 and adv_gol >= 3:
+            return f"{zebra_label} pressionando forte em busca do empate — {adv_chutes} chutes, {adv_gol} no alvo{posse_txt}{vermelho}"
+        if fav_chutes >= 8:
+            return f"{fav_label} controlando e ampliando a pressão — {fav_chutes} chutes, {fav_gol} no alvo{posse_txt}{vermelho}"
+        if fav_chutes > adv_chutes:
+            return f"{fav_label} na frente e dominando — {fav_chutes} chutes x {adv_chutes} da {zebra_label}{posse_txt}{vermelho}"
+        return f"{fav_label} vencendo, jogo controlado — {chutes_h} chutes de Casa x {chutes_a} de Fora{posse_txt}{vermelho}"
+
+    # ── PLACAR EMPATADO (não 0x0) ─────────────────────────────────
     if chutes_gol_h >= 3 and chutes_gol_a >= 3:
-        return f"Jogo bastante movimentado, ambas equipes chutando no alvo — {chutes_gol_h} finalizações de Casa, {chutes_gol_a} de Fora{posse_txt}{vermelho}"
-    # Ambos com muitos chutes
+        return f"Jogo bastante movimentado, ambas chutando no alvo — {chutes_gol_h} finalizações de Casa, {chutes_gol_a} de Fora{posse_txt}{vermelho}"
     if chutes_h >= 8 and chutes_a >= 8:
-        return f"Jogo bastante intenso, ambas equipes chegando constantemente na área — {chutes_h} chutes de Casa, {chutes_a} de Fora{posse_txt}{vermelho}"
-    # Casa dominando forte com gols no alvo
-    if chutes_gol_h >= 4 and chutes_gol_h > chutes_gol_a:
-        extra = ", Casa em busca da virada" if sh < sa else ""
-        return f"Casa chegando constantemente na área — {chutes_h} chutes, {chutes_gol_h} no alvo{posse_txt}{extra}{vermelho}"
-    # Fora dominando forte com gols no alvo
-    if chutes_gol_a >= 4 and chutes_gol_a > chutes_gol_h:
-        extra = ", Fora em busca da virada" if sa < sh else ""
-        return f"Fora chegando constantemente na área — {chutes_a} chutes, {chutes_gol_a} no alvo{posse_txt}{extra}{vermelho}"
-    # Casa com muitos chutes
-    if chutes_h >= 8 and chutes_h > chutes_a:
-        extra = ", Casa em busca do empate" if sh < sa else ""
-        return f"Casa chutando bastante — {chutes_h} chutes{posse_txt}{extra}{vermelho}"
-    # Fora com muitos chutes
-    if chutes_a >= 8 and chutes_a > chutes_h:
-        extra = ", Fora em busca do empate" if sa < sh else ""
-        return f"Fora chutando bastante — {chutes_a} chutes{posse_txt}{extra}{vermelho}"
-    # Casa dominando com escanteios
-    if chutes_h > chutes_a and cantos_h >= 4:
-        return f"Casa pressionando pelas laterais — {cantos_h} escanteios, {chutes_h} chutes{posse_txt}{vermelho}"
-    # Fora dominando com escanteios
-    if chutes_a > chutes_h and cantos_a >= 4:
-        return f"Fora pressionando pelas laterais — {cantos_a} escanteios, {chutes_a} chutes{posse_txt}{vermelho}"
-    # Casa criando mais
-    if chutes_h > chutes_a and chutes_gol_h > 0:
-        extra = ", Casa em busca do empate" if sh < sa else ""
-        return f"Casa criando mais chances — {chutes_h} chutes ({chutes_gol_h} no alvo) x {chutes_a} de Fora{posse_txt}{extra}{vermelho}"
-    # Fora criando mais
-    if chutes_a > chutes_h and chutes_gol_a > 0:
-        extra = ", Fora em busca do empate" if sa < sh else ""
-        return f"Fora criando mais chances — {chutes_a} chutes ({chutes_gol_a} no alvo) x {chutes_h} de Casa{posse_txt}{extra}{vermelho}"
-    # Muitos escanteios
+        return f"Jogo intenso dos dois lados — {chutes_h} chutes de Casa, {chutes_a} de Fora{posse_txt}{vermelho}"
+    if fav_chutes >= 8 and fav_gol >= 3:
+        return f"{fav_label} chegando constantemente na área — {fav_chutes} chutes, {fav_gol} no alvo{posse_txt}{vermelho}"
+    if zebra_dominando and adv_chutes >= 6:
+        return f"{zebra_label} surpreendendo com mais volume — {adv_chutes} chutes ({adv_gol} no alvo) x {fav_chutes} do {fav_label}{posse_txt}{vermelho}"
+    if fav_chutes > adv_chutes and fav_gol > 0:
+        return f"{fav_label} criando mais chances — {fav_chutes} chutes ({fav_gol} no alvo) x {adv_chutes}{posse_txt}{vermelho}"
     if total_cantos >= 6:
         return f"Jogo bastante movimentado pelas laterais — {total_cantos} escanteios, {total_chutes} chutes{posse_txt}{vermelho}"
-    # Equilibrado
-    return f"Jogo equilibrado, ambas equipes criando chances — {chutes_h} chutes de Casa x {chutes_a} de Fora{posse_txt}{vermelho}"
+    return f"Jogo equilibrado, ambas criando chances — {chutes_h} chutes de Casa x {chutes_a} de Fora{posse_txt}{vermelho}"
 
 def msg_universal(home, away, minuto, liga, n, mercado, entrada, placar, extra_val=None, cantos_atual=0, stats=None, sh=0, sa=0, fav_final="h"):
     sep    = "━━━━━━━━━━━━━━━━━━━━"
