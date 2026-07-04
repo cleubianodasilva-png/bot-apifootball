@@ -1124,8 +1124,8 @@ def run():
 
         # Favorito empatando = placar igual
         fav_empatando = (sh == sa)
-        # Favorito perdendo por exatamente 1 gol (qualquer placar)
-        fav_perdendo_1 = (adv_gols - fav_gols) == 1
+        # Favorito perdendo por exatamente 1 gol — SOMENTE placares 0x1 ou 1x0 (total = 1 gol)
+        fav_perdendo_1 = (adv_gols - fav_gols) == 1 and (sh + sa) == 1
         # Condição escanteio: fav empatando OU perdendo por no máximo 1 gol
         corner_valido = fav_empatando or fav_perdendo_1
         # Over 1.5 FT: placares válidos APENAS 1x0 ou 0x1 (fav perdendo por 1, total = 1 gol)
