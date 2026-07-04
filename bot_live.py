@@ -712,14 +712,36 @@ def run():
 
         # Determinar favorito pelas odds
         fav_final = get_favorito_odds(h, a)
-        if not fav_final:
-            fav_final = "?"  # Sem odds disponível — favorito não identificado
-            print(f"[FAV-FALLBACK] {h} x {a} — sem odds disponível")
+        fav_por_odds = fav_final in ("h", "a")
 
-        # Favorito identificado? Usado nos mercados que exigem odds confirmada
-        fav_confirmado = fav_final in ("h", "a")
-        if not fav_confirmado:
-            fav_final = "h"  # fallback só para cálculos internos (não escanteio)
+        if not fav_por_odds:
+            # Fallback 1: maior volume de chutes
+            ch = stats.get("chutes_tot_h", 0) if stats else 0
+            ca = stats.get("chutes_tot_a", 0) if stats else 0
+            eh = max(0, stats.get("escanteios_h", 0)) if stats else 0
+            ea = max(0, stats.get("escanteios_a", 0)) if stats else 0
+            if ch > ca:
+                fav_final = "h"
+                print(f"[FAV-FALLBACK] {h} x {a} — Casa favorita por chutes ({ch}x{ca})")
+            elif ca > ch:
+                fav_final = "a"
+                print(f"[FAV-FALLBACK] {h} x {a} — Fora favorita por chutes ({ca}x{ch})")
+            # Fallback 2: maior número de escanteios (empate nos chutes)
+            elif eh > ea:
+                fav_final = "h"
+                print(f"[FAV-FALLBACK] {h} x {a} — Casa favorita por escanteios ({eh}x{ea})")
+            elif ea > eh:
+                fav_final = "a"
+                print(f"[FAV-FALLBACK] {h} x {a} — Fora favorita por escanteios ({ea}x{eh})")
+            else:
+                fav_final = "?"
+                print(f"[SKIP-FAV] {h} x {a} — sem dados suficientes para identificar favorito")
+
+        # fav_confirmado = odds confirmada (usado nos mercados de escanteio)
+        fav_confirmado = fav_por_odds
+        if fav_final not in ("h", "a"):
+            # Sem odds e sem fallback — pula escanteio mas continua outros mercados com "h"
+            fav_final = "h"
 
         red_fav = stats.get(f"red_cards_{fav_final}", 0) if stats else 0
 
