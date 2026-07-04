@@ -454,27 +454,39 @@ def gerar_motivo(mercado, stats, sh, sa, fav_final, cantos_atual=0):
     cantos_a     = max(0, stats.get("escanteios_a", 0)) if stats else 0
     red_h        = stats.get("red_cards_h", 0) if stats else 0
     red_a        = stats.get("red_cards_a", 0) if stats else 0
-    passes_h     = stats.get("passes_precisos_h", 0) if stats else 0
-    passes_a     = stats.get("passes_precisos_a", 0) if stats else 0
-    posse_h      = stats.get("posse_h", 0.0) if stats else 0.0
-    posse_a      = stats.get("posse_a", 0.0) if stats else 0.0
+    fav_chutes   = chutes_h if fav_final == "h" else chutes_a
+    fav_chutes_g = chutes_gol_h if fav_final == "h" else chutes_gol_a
     fav_label    = "Casa" if fav_final == "h" else "Fora"
+    total_chutes = chutes_h + chutes_a
+    total_cantos = cantos_h + cantos_a
+    tem_dados    = total_chutes > 0 or total_cantos > 0
 
-    # Formata posse como inteiro percentual
-    try: ph = int(round(float(posse_h) * 100)) if posse_h <= 1 else int(round(float(posse_h)))
-    except: ph = 0
-    try: pa = int(round(float(posse_a) * 100)) if posse_a <= 1 else int(round(float(posse_a)))
-    except: pa = 0
+    if not tem_dados:
+        return f"✅ Favorito: {fav_label} — Estatísticas não disponíveis para esta liga"
 
-    return (
-        f"⭐️ Favorito: <b>{fav_label}</b>\n"
-        f"⌛ Posse de bola: <b>{ph}%</b> - <b>{pa}%</b>\n"
-        f"🔥 Passes precisos: <b>{passes_h}</b> - <b>{passes_a}</b>\n"
-        f"⛳ Escanteios: <b>{cantos_h}</b> - <b>{cantos_a}</b>\n"
-        f"🎯 Chutes Totais: <b>{chutes_h}</b> - <b>{chutes_a}</b>\n"
-        f"🎯 Chutes no alvo: <b>{chutes_gol_h}</b> - <b>{chutes_gol_a}</b>\n"
-        f"🟥 Cartões vermelhos: <b>{red_h}</b> - <b>{red_a}</b>"
-    )
+    partes = []
+
+    # Favorito
+    if fav_chutes > 0:
+        partes.append(f"Favorito ({fav_label}) com {fav_chutes} chutes ({fav_chutes_g} no alvo)")
+    else:
+        partes.append(f"Favorito: {fav_label}")
+
+    # Volume de jogo
+    if total_chutes >= 10:
+        partes.append(f"jogo intenso com {total_chutes} chutes no total")
+    elif total_chutes > 0:
+        partes.append(f"{total_chutes} chutes no total")
+
+    # Escanteios
+    if total_cantos > 0:
+        partes.append(f"{total_cantos} escanteios cobrados ({cantos_h} x {cantos_a})")
+    
+    # Cartão vermelho
+    if red_h > 0 or red_a > 0:
+        partes.append(f"⚠️ Cartão vermelho: {'Casa' if red_h > 0 else 'Fora'}")
+
+    return "✅ " + " | ".join(partes)
 
 
 def msg_universal(home, away, minuto, liga, n, mercado, entrada, placar, extra_val=None, cantos_atual=0, stats=None, sh=0, sa=0, fav_final="h"):
