@@ -1,0 +1,49 @@
+name: Maquina de Greens Bot
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  rodar-bot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Checkout codigo
+        uses: actions/checkout@v3
+
+      - name: Instalar Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Instalar dependencias
+        run: pip install requests
+
+      - name: Restaurar cache de sinais enviados
+        uses: actions/cache@v3
+        with:
+          path: |
+            sent_live_signals.json
+            sinais_registrados.json
+            resultados.json
+          key: bot-state-${{ runner.os }}
+          restore-keys: |
+            bot-state-${{ runner.os }}
+
+      - name: Rodar o robo
+        run: python bot_live.py
+
+      - name: Salvar cache de sinais enviados
+        uses: actions/cache/save@v3
+        if: always()
+        with:
+          path: |
+            sent_live_signals.json
+            sinais_registrados.json
+            resultados.json
+          key: bot-state-${{ runner.os }}-${{ github.run_id }}
