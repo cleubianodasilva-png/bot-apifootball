@@ -242,21 +242,7 @@ def get_jogos_espn():
                     except:
                         clock = comp.get("status", {}).get("clock", 0)
                         minuto = int(float(clock) // 60) if clock else 0
-                    # Fallback: ESPN às vezes mantém state=pre mesmo com jogo em andamento
-                    # Se state=pre mas horário agendado já passou há mais de 5 min, trata como ao vivo
-                    if state == "pre":
-                        date_str = e.get("date", "")
-                        if date_str:
-                            try:
-                                from datetime import timezone as _tz
-                                dt_jogo = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
-                                agora   = datetime.now(_tz.utc)
-                                diff    = (agora - dt_jogo).total_seconds()
-                                if diff >= 300:  # mais de 5 minutos após o início
-                                    minuto = min(int(diff // 60), 90)
-                                    state  = "in"
-                            except:
-                                pass
+
                     # Aceita "post" recente (encerrado há menos de 15 min) para janela 80-88
                     if state == "post":
                         date_str = e.get("date", "")
