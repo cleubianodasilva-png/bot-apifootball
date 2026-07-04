@@ -434,45 +434,15 @@ def gerar_motivo(mercado, stats, sh, sa, fav_final, cantos_atual=0):
     chutes_a     = stats.get("chutes_tot_a", 0) if stats else 0
     chutes_gol_h = stats.get("chutes_gol_h", 0) if stats else 0
     chutes_gol_a = stats.get("chutes_gol_a", 0) if stats else 0
-    total_chutes = chutes_h + chutes_a
-    total_gols   = sh + sa
-    fav_gols     = sh if fav_final == "h" else sa
-    adv_gols     = sa if fav_final == "h" else sh
-    fav_chutes   = chutes_h if fav_final == "h" else chutes_a
-    if "CORNER" in mercado:
-        if cantos_atual >= 8:
-            return f"✅ Jogo extremamente movimentado — {cantos_atual} escanteios já cobrados"
-        elif cantos_atual >= 5:
-            return f"✅ Alto volume de escanteios — {cantos_atual} cantos no jogo até agora"
-        else:
-            return f"✅ Jogo aberto com pressão nas laterais — {cantos_atual} escanteios registrados"
-    if mercado == "HT":
-        if fav_chutes >= 8:
-            return f"✅ Favorito dominando com {fav_chutes} finalizações — pressão intensa no 1º tempo"
-        elif total_chutes >= 10:
-            return f"✅ Partida movimentada com {total_chutes} chutes — alto potencial de gol"
-        else:
-            return f"✅ Favorito em pressão com {fav_chutes} chutes no 1º tempo"
-    if mercado == "BTTS":
-        if fav_gols == 0 and adv_gols == 1:
-            return f"✅ Favorito perdendo — busca empate com {fav_chutes} finalizações no jogo"
-        elif total_chutes >= 12:
-            return f"✅ Jogo aberto com {total_chutes} chutes — ambos os times ameaçando"
-        else:
-            return f"✅ Ambos os times criando chances — {chutes_gol_h + chutes_gol_a} chutes no gol"
-    if mercado == "OFT":
-        if fav_chutes >= 10:
-            return f"✅ Favorito com {fav_chutes} finalizações em busca da virada"
-        elif total_gols == 1:
-            return f"✅ Placar aberto com {total_chutes} chutes — jogo intenso"
-        else:
-            return f"✅ Partida movimentada com {total_chutes} finalizações no total"
-    if mercado == "OVERGOAL":
-        if total_chutes >= 8:
-            return f"✅ Jogo intenso com {total_chutes} chutes — gol esperado"
-        else:
-            return f"✅ Pressão ofensiva detectada — {fav_chutes} finalizações do favorito"
-    return f"✅ Dados ao vivo: {total_chutes} chutes | {sh}x{sa} no placar"
+    cantos_h     = max(0, stats.get("escanteios_h", 0)) if stats else 0
+    cantos_a     = max(0, stats.get("escanteios_a", 0)) if stats else 0
+    fav_label    = "Casa" if fav_final == "h" else "Fora"
+    return (
+        f"👟 Chutes: <b>{chutes_h}</b> (casa) x <b>{chutes_a}</b> (fora)\n"
+        f"🎯 Chutes no gol: <b>{chutes_gol_h}</b> (casa) x <b>{chutes_gol_a}</b> (fora)\n"
+        f"⛳️ Escanteios: <b>{cantos_h}</b> (casa) x <b>{cantos_a}</b> (fora)\n"
+        f"⭐️ Favorito: <b>{fav_label}</b>"
+    )
 
 
 def msg_universal(home, away, minuto, liga, n, mercado, entrada, placar, extra_val=None, cantos_atual=0, stats=None, sh=0, sa=0, fav_final="h"):
