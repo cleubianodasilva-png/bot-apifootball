@@ -766,7 +766,8 @@ def run():
 
         # MERCADO 1: OVER 0.5 HT (15-27 min, 0x0, favorito empatando, sem vermelho do fav)
         if p == 1 and 15 <= m <= 27 and stot == 0 and fav_empatando and red_fav == 0:
-            key = f"{fid}_ht"
+            hoje = datetime.now(BRT).strftime('%Y%m%d')
+            key = f"{fid}_ht_{hoje}"
             if key not in sent:
                 mid = send_telegram(msg_universal(h, a, m, liga, 3, "HT", "Over 0.5 HT", placar, stats=stats, sh=sh, sa=sa, fav_final=fav_final))
                 if mid:
@@ -775,7 +776,8 @@ def run():
 
         # MERCADO 2: AMBAS MARCAM BTTS (60-75 min, fav perdendo por 1, sem vermelho do fav)
         if p == 2 and 60 <= m <= 75 and fav_perdendo_1 and red_fav == 0:
-            key = f"{fid}_btts"
+            hoje = datetime.now(BRT).strftime('%Y%m%d')
+            key = f"{fid}_btts_{hoje}"
             if key not in sent:
                 mid = send_telegram(msg_universal(h, a, m, liga, 4, "BTTS", "Ambas Marcam", placar, stats=stats, sh=sh, sa=sa, fav_final=fav_final))
                 if mid:
@@ -784,7 +786,8 @@ def run():
 
         # MERCADO 3: OVER 1.5 FT (60-75 min, fav empatando ou perdendo por 1, placares: 0x0/1x0/0x1/1x1, sem vermelho do fav)
         if p == 2 and 60 <= m <= 75 and oft_valido and red_fav == 0:
-            key = f"{fid}_oft"
+            hoje = datetime.now(BRT).strftime('%Y%m%d')
+            key = f"{fid}_oft_{hoje}"
             if key not in sent:
                 mid = send_telegram(msg_universal(h, a, m, liga, 4, "OFT", "Over 1.5 FT", placar, stats=stats, sh=sh, sa=sa, fav_final=fav_final))
                 if mid:
@@ -793,7 +796,8 @@ def run():
 
         # MERCADO 4: OVER 0.5 FT (60-75 min, 0x0, favorito empatando, sem vermelho do fav)
         if p == 2 and 60 <= m <= 75 and stot == 0 and fav_empatando and red_fav == 0:
-            key = f"{fid}_overgoal"
+            hoje = datetime.now(BRT).strftime('%Y%m%d')
+            key = f"{fid}_overgoal_{hoje}"
             if key not in sent:
                 mid = send_telegram(msg_universal(h, a, m, liga, 4, "OVERGOAL", "Over 0.5 FT", placar, stats=stats, sh=sh, sa=sa, fav_final=fav_final))
                 if mid:
@@ -802,7 +806,8 @@ def run():
 
         # MERCADO 5: ESCANTEIO LIMITE HT (30-38 min, fav confirmado, empatando ou perdendo por 1, sem vermelho)
         if p == 1 and 30 <= m <= 38 and fav_confirmado and corner_valido and red_fav == 0:
-            key = f"{fid}_cht"
+            hoje = datetime.now(BRT).strftime('%Y%m%d')
+            key = f"{fid}_cht_{hoje}"
             cantos_h = stats.get("escanteios_h", 0) if stats else 0
             cantos_a = stats.get("escanteios_a", 0) if stats else 0
             cantos = max(0, cantos_h) + max(0, cantos_a)  # -1 vira 0
@@ -814,7 +819,8 @@ def run():
 
         # MERCADO 6: ESCANTEIO LIMITE FT (80-88 min, fav confirmado, empatando ou perdendo por 1, sem vermelho)
         if p == 2 and 80 <= m <= 88 and fav_confirmado and corner_valido and red_fav == 0:
-            key = f"{fid}_cft"
+            hoje = datetime.now(BRT).strftime('%Y%m%d')
+            key = f"{fid}_cft_{hoje}"
             cantos_h = stats.get("escanteios_h", 0) if stats else 0
             cantos_a = stats.get("escanteios_a", 0) if stats else 0
             cantos = max(0, cantos_h) + max(0, cantos_a)  # -1 vira 0
