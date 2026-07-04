@@ -193,6 +193,12 @@ def get_relatorio_hoje():
     return greens, reds
 
 def enviar_relatorio_diario():
+    # Proteção contra duplicata: só envia 1x por dia
+    hoje_key = f"relatorio_{datetime.now(BRT).strftime('%Y-%m-%d')}"
+    sent_ctrl = load_sent()
+    if hoje_key in sent_ctrl:
+        print(f"[Relatório] Já enviado hoje ({hoje_key}), ignorando.")
+        return
     sep = "━━━━━━━━━━━━━━━━━━━━"
     hoje = datetime.now(BRT).strftime("%d/%m/%Y")
     greens, reds = get_relatorio_hoje()
@@ -206,7 +212,10 @@ def enviar_relatorio_diario():
         f"🎯 <b>ASSERTIVIDADE:</b> {taxa:.1f}%\n{sep}\n"
         f"💰 <i>Máquina de Greens — Resultados do dia!</i>"
     )
-    send_telegram(msg, botoes=False)
+    if send_telegram(msg, botoes=False):
+        sent_ctrl.add(hoje_key)
+        save_sent(sent_ctrl)
+        print(f"[Relatório] Enviado e registrado ({hoje_key})")
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # API 1 — ESPN: lista de jogos ao vivo em TODAS as ligas
