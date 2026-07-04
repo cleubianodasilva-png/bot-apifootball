@@ -220,90 +220,88 @@ def enviar_relatorio_diario():
 # ═══════════════════════════════════════════════════════════════════════════════
 # API 1 — ESPN: lista de jogos ao vivo em TODAS as ligas
 # ═══════════════════════════════════════════════════════════════════════════════
+def _fetch_liga(liga_slug):
+    """Busca jogos ao vivo de uma liga ESPN. Retorna lista de jogos."""
+    resultado = []
+    try:
+        url  = ESPN_SCOREBOARD.format(liga=liga_slug)
+        r    = requests.get(url, timeout=8)
+        if r.status_code != 200:
+            return resultado
+        data       = r.json()
+        ligas_data = data.get("leagues", [])
+        liga_nome  = ligas_data[0].get("name", "") if ligas_data else ""
+        if not liga_nome or liga_nome.lower() in ("all", liga_slug):
+            liga_nome = LIGA_NOMES.get(liga_slug, liga_slug)
+        events = data.get("events", [])
+        for e in events:
+            try:
+                eid  = e.get("id", "")
+                comp   = e.get("competitions", [{}])[0]
+                status = comp.get("status", {}).get("type", {})
+                state  = status.get("state", "")
+                minuto_raw = comp.get("status", {}).get("displayClock", "0")
+                try:
+                    minuto = int(minuto_raw.replace("'","").split("+")[0].split(":")[0])
+                except:
+                    clock = comp.get("status", {}).get("clock", 0)
+                    minuto = int(float(clock) // 60) if clock else 0
+
+                if state == "post":
+                    date_str = e.get("date", "")
+                    if date_str:
+                        try:
+                            from datetime import timezone as _tz
+                            dt_jogo = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
+                            agora   = datetime.now(_tz.utc)
+                            diff    = (agora - dt_jogo).total_seconds()
+                            if diff <= (90 + 15) * 60:
+                                minuto = 85
+                                state  = "in"
+                            else:
+                                continue
+                        except:
+                            continue
+                    else:
+                        continue
+                if state not in ("in",):
+                    continue
+                period = comp.get("status", {}).get("period", 1)
+                if not period or period == 0:
+                    period = 2 if minuto > 45 else 1
+                teams  = comp.get("competitors", [])
+                if len(teams) < 2:
+                    continue
+                home_t = teams[0]
+                away_t = teams[1]
+                sh     = int(home_t.get("score", 0) or 0)
+                sa     = int(away_t.get("score", 0) or 0)
+                home   = home_t.get("team", {}).get("displayName", "")
+                away   = away_t.get("team", {}).get("displayName", "")
+                liga   = liga_nome if liga_nome and liga_nome.lower() not in ("all", liga_slug.lower()) else LIGA_NOMES.get(liga_slug, liga_slug)
+                resultado.append({
+                    "fid": eid, "home": home, "away": away,
+                    "sh": sh, "sa": sa, "minuto": minuto,
+                    "period": period, "liga": liga, "source": "espn"
+                })
+            except:
+                continue
+    except:
+        pass
+    return resultado
+
+
 def get_jogos_espn():
+    from concurrent.futures import ThreadPoolExecutor, as_completed
     jogos  = []
     vistos = set()
-    for liga_slug in ESPN_LIGAS:
-        try:
-            url  = ESPN_SCOREBOARD.format(liga=liga_slug)
-            r    = requests.get(url, timeout=8)
-            if r.status_code != 200:
-                continue
-            data   = r.json()
-            # Pega o nome real da liga
-            ligas_data = data.get("leagues", [])
-            liga_nome  = ligas_data[0].get("name", "") if ligas_data else ""
-            # ESPN às vezes retorna "all" como nome — ignorar e usar mapeamento
-            if not liga_nome or liga_nome.lower() in ("all", liga_slug):
-                liga_nome = LIGA_NOMES.get(liga_slug, liga_slug)
-            events = data.get("events", [])
-            for e in events:
-                try:
-                    eid  = e.get("id", "")
-                    if eid in vistos:
-                        continue
-                    comp   = e.get("competitions", [{}])[0]
-                    status = comp.get("status", {}).get("type", {})
-                    state  = status.get("state", "")
-                    minuto_raw = comp.get("status", {}).get("displayClock", "0")
-                    try:
-                        minuto = int(minuto_raw.replace("'","").split("+")[0].split(":")[0])
-                    except:
-                        clock = comp.get("status", {}).get("clock", 0)
-                        minuto = int(float(clock) // 60) if clock else 0
-
-                    # Aceita "post" recente (encerrado há menos de 15 min) para janela 80-88
-                    if state == "post":
-                        date_str = e.get("date", "")
-                        if date_str:
-                            try:
-                                from datetime import timezone as _tz
-                                dt_jogo = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
-                                agora   = datetime.now(_tz.utc)
-                                diff    = (agora - dt_jogo).total_seconds()
-                                # Jogo de 90min + até 15min de tolerância
-                                if diff <= (90 + 15) * 60:
-                                    minuto = 85  # coloca na janela 80-88
-                                    state  = "in"
-                                else:
-                                    continue
-                            except:
-                                continue
-                        else:
-                            continue
-                    if state not in ("in",):
-                        continue
-                    # Calcula period corretamente
-                    period = comp.get("status", {}).get("period", 1)
-                    if not period or period == 0:
-                        period = 2 if minuto > 45 else 1
-                    teams  = comp.get("competitors", [])
-                    if len(teams) < 2:
-                        continue
-                    home_t = teams[0]
-                    away_t = teams[1]
-                    sh     = int(home_t.get("score", 0) or 0)
-                    sa     = int(away_t.get("score", 0) or 0)
-                    home   = home_t.get("team", {}).get("displayName", "")
-                    away   = away_t.get("team", {}).get("displayName", "")
-                    liga   = liga_nome if liga_nome and liga_nome.lower() not in ("all", liga_slug.lower()) else LIGA_NOMES.get(liga_slug, liga_slug)
-                    vistos.add(eid)
-                    jogos.append({
-                        "fid"   : eid,
-                        "home"  : home,
-                        "away"  : away,
-                        "sh"    : sh,
-                        "sa"    : sa,
-                        "minuto": minuto,
-                        "period": period,
-                        "liga"  : liga,
-                        "source": "espn"
-                    })
-                except:
-                    continue
-            time.sleep(0.3)
-        except:
-            continue
+    with ThreadPoolExecutor(max_workers=20) as executor:
+        futures = {executor.submit(_fetch_liga, slug): slug for slug in ESPN_LIGAS}
+        for future in as_completed(futures):
+            for j in future.result():
+                if j["fid"] not in vistos:
+                    vistos.add(j["fid"])
+                    jogos.append(j)
     print(f"[ESPN] {len(jogos)} jogos ao vivo ({len(ESPN_LIGAS)} ligas monitoradas)")
     return jogos
 
