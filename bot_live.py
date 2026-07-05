@@ -1135,8 +1135,8 @@ def check_status_command(total_jogos_live=0, jogos_live=None, jogos_na_janela=No
                         h = j.get("home", "")
                         a = j.get("away", "")
                         m = j.get("minuto", 0)
-                        sh = j.get("score_h", 0)
-                        sa = j.get("score_a", 0)
+                        sh = j.get("sh", 0)
+                        sa = j.get("sa", 0)
                         liga = j.get("liga", "")
                         linhas_janela += f"🎯 <b>{h} x {a}</b> | {m}' | {sh}x{sa} | {liga}\n"
                 else:
@@ -1149,8 +1149,8 @@ def check_status_command(total_jogos_live=0, jogos_live=None, jogos_na_janela=No
                         h = j.get("home", "")
                         a = j.get("away", "")
                         m = j.get("minuto", 0)
-                        sh = j.get("score_h", 0)
-                        sa = j.get("score_a", 0)
+                        sh = j.get("sh", 0)
+                        sa = j.get("sa", 0)
                         linhas_fora += f"⏳ {h} x {a} | {m}' | {sh}x{sa}\n"
                     if len(fora_janela) > 10:
                         linhas_fora += f"... e mais {len(fora_janela)-10} jogos\n"
