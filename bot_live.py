@@ -303,8 +303,8 @@ def send_telegram(msg, botoes=True, reply_to=None, marca=None, home="", away="")
         if botoes:
             import urllib.parse
             query = urllib.parse.quote(f"{home} vs {away}") if home and away else ""
-            bet365_url   = f"https://www.bet365.bet.br/#/AZ/~{query}/" if query else "https://www.bet365.bet.br/#/AZ/"
-            paripesa_url = f"https://paripesa.com/pt/live/search/{query}" if query else "https://paripesa.com/pt/live"
+            bet365_url   = "https://www.bet365.bet.br/#/AZ/"
+            paripesa_url = "https://paripesa.com/pt/live"
             payload["reply_markup"] = json.dumps({"inline_keyboard": [[
                 {"text": "🟣 BET365",   "url": bet365_url},
                 {"text": "🔵 PARIPESA", "url": paripesa_url}
