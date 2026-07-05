@@ -318,7 +318,8 @@ def send_telegram(msg, botoes=True, reply_to=None, marca=None):
 # ═══════════════════════════════════════════════════════════════════════════════
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "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")
 GITHUB_REPO  = os.environ.get("GITHUB_REPOSITORY", "cleubianodasilva-png/boot-ia-inteligente-bot")
-SENT_API_PATH = "sent_live_signals.json"
+SENT_API_PATH      = "sent_live_signals.json"
+RESULTADO_API_PATH = "resultados.json"
 
 def _github_headers():
     return {
@@ -390,41 +391,61 @@ def registrar_sinal(fid, mercado, home, away, message_id, extra_val=None):
     })
     with open(SINAIS_FILE, 'w') as f: json.dump(sinais, f)
 
-def salvar_resultado(resultado):
-    # Suporta tanto formato lista [{data, resultado}] quanto dict {greens, reds}
-    hoje = datetime.now(BRT).strftime("%Y-%m-%d")
-    registros = []
+def _load_resultados_github():
+    """Carrega resultados.json do GitHub. Retorna lista de registros."""
+    import base64 as _b64
+    if GITHUB_TOKEN and GITHUB_REPO:
+        try:
+            url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{RESULTADO_API_PATH}"
+            r = requests.get(url, headers=_github_headers(), timeout=8)
+            if r.status_code == 200:
+                data = json.loads(_b64.b64decode(r.json()["content"]).decode())
+                if isinstance(data, list):
+                    return data
+        except Exception as e:
+            print(f"[RESULTADO] Erro load GitHub: {e}")
+    # Fallback local
     if os.path.exists(RESULTADO_FILE):
         try:
             with open(RESULTADO_FILE, 'r') as f:
-                dados = json.load(f)
-            if isinstance(dados, list):
-                registros = dados
-            elif isinstance(dados, dict):
-                # Converte formato antigo para lista
-                for _ in range(dados.get("greens", 0)):
-                    registros.append({"data": hoje, "resultado": "green"})
-                for _ in range(dados.get("reds", 0)):
-                    registros.append({"data": hoje, "resultado": "red"})
+                return json.load(f)
         except: pass
-    registros.append({"data": hoje, "resultado": resultado, "timestamp": datetime.now(BRT).isoformat()})
+    return []
+
+def _save_resultados_github(registros):
+    """Salva resultados.json no GitHub E localmente."""
+    import base64 as _b64
     with open(RESULTADO_FILE, 'w') as f: json.dump(registros, f, indent=2)
+    if GITHUB_TOKEN and GITHUB_REPO:
+        try:
+            url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{RESULTADO_API_PATH}"
+            r = requests.get(url, headers=_github_headers(), timeout=8)
+            sha = r.json().get("sha", "") if r.status_code == 200 else ""
+            content_b64 = _b64.b64encode(json.dumps(registros, indent=2).encode()).decode()
+            payload = {"message": "state: atualiza resultados [skip ci]", "content": content_b64}
+            if sha: payload["sha"] = sha
+            r2 = requests.put(url, headers=_github_headers(), json=payload, timeout=10)
+            if r2.status_code in (200, 201):
+                print(f"[RESULTADO] Salvo no GitHub: {len(registros)} registros")
+            else:
+                print(f"[RESULTADO] Erro GitHub save: {r2.status_code}")
+        except Exception as e:
+            print(f"[RESULTADO] Erro save GitHub: {e}")
+
+def salvar_resultado(resultado):
+    hoje = datetime.now(BRT).strftime("%Y-%m-%d")
+    registros = _load_resultados_github()
+    registros.append({"data": hoje, "resultado": resultado, "timestamp": datetime.now(BRT).isoformat()})
+    _save_resultados_github(registros)
 
 def get_relatorio_hoje():
     hoje = datetime.now(BRT).strftime("%Y-%m-%d")
     greens, reds = 0, 0
-    if os.path.exists(RESULTADO_FILE):
-        try:
-            with open(RESULTADO_FILE, 'r') as f: dados = json.load(f)
-            if isinstance(dados, list):
-                for r in dados:
-                    if r.get("data") == hoje:
-                        if r.get("resultado") == "green": greens += 1
-                        else: reds += 1
-            elif isinstance(dados, dict):
-                greens = dados.get("greens", 0)
-                reds   = dados.get("reds", 0)
-        except: pass
+    registros = _load_resultados_github()
+    for r in registros:
+        if r.get("data") == hoje:
+            if r.get("resultado") == "green": greens += 1
+            else: reds += 1
     return greens, reds
 
 def enviar_relatorio_diario():
