@@ -1143,11 +1143,11 @@ def run():
     jogos_live = jogos_espn + jogos_apif
     print(f"[Total] {len(jogos_live)} jogos ao vivo (ESPN={len(jogos_espn)} + API-Football={len(jogos_apif)})")
 
-    check_status_command(total_jogos_live=len(jogos_live), jogos_live=jogos_live, jogos_na_janela=jogos_na_janela)
-
     # PASSO 2: Filtra janelas alvo
     jogos_na_janela = filtrar_janelas(jogos_live)
     print(f"[Janela] {len(jogos_na_janela)} jogos nas janelas alvo")
+
+    check_status_command(total_jogos_live=len(jogos_live), jogos_live=jogos_live, jogos_na_janela=jogos_na_janela)
 
     if not jogos_na_janela:
         print("[OK] Nenhum jogo na janela — aguardando próximo ciclo")
