@@ -1055,7 +1055,7 @@ def checar_resultado(sinal):
 # ═══════════════════════════════════════════════════════════════════════════════
 # COMANDOS TELEGRAM (/relatorio e /radar)
 # ═══════════════════════════════════════════════════════════════════════════════
-def check_status_command(total_jogos_live=0):
+def check_status_command(total_jogos_live=0, jogos_live=None, jogos_na_janela=None):
     last_id = 0
     if os.path.exists(LAST_UPDATE_FILE):
         try:
@@ -1077,12 +1077,47 @@ def check_status_command(total_jogos_live=0):
             if text == "/relatorio":
                 enviar_relatorio_diario()
             elif text == "/radar":
-                send_telegram(
-                    f"{sep}\n📡⚠️<b>JOGOS NO RADAR</b>⚠️📡\n{sep}\n"
-                    f"O Robô está monitorando <b>{total_jogos_live}</b> jogos ao vivo.\n{sep}\n"
-                    f"🔍 Buscando Oportunidades nos 6 mercados...\n{sep}",
-                    botoes=False
+                jogos_live = jogos_live or []
+                jogos_na_janela = jogos_na_janela or []
+                # Monta lista de jogos na janela
+                if jogos_na_janela:
+                    linhas_janela = ""
+                    for j in jogos_na_janela:
+                        h = j.get("home", "")
+                        a = j.get("away", "")
+                        m = j.get("minuto", 0)
+                        sh = j.get("score_h", 0)
+                        sa = j.get("score_a", 0)
+                        liga = j.get("liga", "")
+                        linhas_janela += f"🎯 <b>{h} x {a}</b> | {m}' | {sh}x{sa} | {liga}\n"
+                else:
+                    linhas_janela = "Nenhum jogo na janela no momento.\n"
+                # Monta lista de jogos ao vivo fora da janela (até 10)
+                fora_janela = [j for j in jogos_live if j not in jogos_na_janela]
+                if fora_janela:
+                    linhas_fora = ""
+                    for j in fora_janela[:10]:
+                        h = j.get("home", "")
+                        a = j.get("away", "")
+                        m = j.get("minuto", 0)
+                        sh = j.get("score_h", 0)
+                        sa = j.get("score_a", 0)
+                        linhas_fora += f"⏳ {h} x {a} | {m}' | {sh}x{sa}\n"
+                    if len(fora_janela) > 10:
+                        linhas_fora += f"... e mais {len(fora_janela)-10} jogos\n"
+                else:
+                    linhas_fora = "—\n"
+                msg_radar = (
+                    f"{sep}\n📡 <b>RADAR AO VIVO</b> 📡\n{sep}\n"
+                    f"🔴 <b>{total_jogos_live} jogos ao vivo</b>\n"
+                    f"🎯 <b>{len(jogos_na_janela)} na janela alvo</b>\n"
+                    f"{sep}\n"
+                    f"<b>🎯 NA JANELA:</b>\n{linhas_janela}"
+                    f"{sep}\n"
+                    f"<b>⏳ FORA DA JANELA:</b>\n{linhas_fora}"
+                    f"{sep}"
                 )
+                send_telegram(msg_radar, botoes=False)
         if new_last_id > last_id:
             with open(LAST_UPDATE_FILE, 'w') as f: json.dump({"last_id": new_last_id}, f)
     except: pass
@@ -1108,7 +1143,7 @@ def run():
     jogos_live = jogos_espn + jogos_apif
     print(f"[Total] {len(jogos_live)} jogos ao vivo (ESPN={len(jogos_espn)} + API-Football={len(jogos_apif)})")
 
-    check_status_command(total_jogos_live=len(jogos_live))
+    check_status_command(total_jogos_live=len(jogos_live), jogos_live=jogos_live, jogos_na_janela=jogos_na_janela)
 
     # PASSO 2: Filtra janelas alvo
     jogos_na_janela = filtrar_janelas(jogos_live)
