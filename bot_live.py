@@ -62,9 +62,9 @@ LIGA_NOMES = {
     "mys.1": "Malaysian Super League", "tha.1": "Thai League 1",
     "idn.1": "Indonesian Super League", "aus.1": "Australian A-League",
     "isr.1": "Israeli Premier League", "rus.1": "Russian Premier League",
-    "fin.1": "Finnish Veikkausliga", "swe.2": "Swedish SuperEttan",
+    "fin.1": "Finnish Veikkausliga", "fin.2": "Ykkonen Finlândia", "swe.2": "Swedish SuperEttan",
     "nor.2": "Norwegian 1. Division", "den.2": "Danish 1. Division",
-    "nga.1": "Nigerian Professional League",
+    "nga.1": "Nigerian Professional League", "zim.1": "Premier Soccer League Zimbábue",
     "caf.champions": "CAF Champions League", "afc.champions": "AFC Champions League",
 }
 ESPN_LIGAS = [
@@ -79,6 +79,7 @@ ESPN_LIGAS = [
     "arg.1",
     "arg.2",
     "arg.3",
+    "arg.4",
     "arg.copa",
     "arg.copa_de_la_superliga",
     "arg.supercopa",
