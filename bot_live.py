@@ -1419,7 +1419,8 @@ def run():
 
         # MERCADO 4: OVER GOL PARTIDA (60-75 min, placares 0x0/1x1/0x1/1x0, favorito empatando ou perdendo por 1)
         overgoal_placar = (sh == 0 and sa == 0) or (sh == 1 and sa == 1) or (sh == 0 and sa == 1) or (sh == 1 and sa == 0)
-        overgoal_valido = (fav_empatando or fav_perdendo_1) and overgoal_placar
+        # 1x1 = sempre valido (ambos empatando); outros placares exigem favorito empatando ou perdendo por 1
+        overgoal_valido = overgoal_placar and ((sh == 1 and sa == 1) or fav_empatando or fav_perdendo_1)
         if p == 2 and 60 <= m <= 75 and overgoal_valido and red_fav == 0:
             hoje = datetime.now(BRT).strftime('%Y%m%d')
             key = f"{fid}_overgoal_{hoje}"
