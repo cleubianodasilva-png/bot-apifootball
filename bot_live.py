@@ -895,7 +895,29 @@ def get_favorito_odds(home, away, fid=None, league=None):
         except Exception as e:
             print(f"[ODDS-ESPN] Erro: {e}")
 
-    # Fallback: Odds API (quando tiver cota)
+    # Fallback 2: APIfootball.com odds (quando fid for do apifootball)
+    if fid and str(fid).replace("apfc_","").isdigit():
+        try:
+            match_id = str(fid).replace("apfc_","")
+            r = requests.get("https://apiv3.apifootball.com/",
+                             params={"action": "get_odds", "match_id": match_id,
+                                     "APIkey": APIFOOTBALL_COM_KEY}, timeout=8)
+            odds_data = r.json()
+            if isinstance(odds_data, list) and odds_data:
+                odd = odds_data[0]
+                try:
+                    odd_h = float(odd.get("odd_1", 0) or 0)
+                    odd_a = float(odd.get("odd_2", 0) or 0)
+                    if odd_h > 1 and odd_a > 1:
+                        fav = "h" if odd_h <= odd_a else "a"
+                        print(f"[ODDS-APFC] {home} x {away} | Casa:{odd_h} Fora:{odd_a} → Fav:{fav}")
+                        return fav
+                except:
+                    pass
+        except Exception as e:
+            print(f"[ODDS-APFC] Erro: {e}")
+
+    # Fallback 3: Odds API (quando tiver cota)
     try:
         r = requests.get("https://api.the-odds-api.com/v4/sports/soccer/odds/",
                          params={"apiKey": ODDS_API_KEY, "regions": "eu",
