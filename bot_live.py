@@ -1371,7 +1371,7 @@ def run():
         )
 
         # MERCADO 1: OVER 0.5 HT (15-27 min, 0x0, favorito empatando, sem vermelho do fav)
-        if p == 1 and 15 <= m <= 27 and stot == 0 and fav_empatando and red_fav == 0:
+        if p == 1 and 15 <= m <= 27 and fav_empatando and red_fav == 0:
             hoje = datetime.now(BRT).strftime('%Y%m%d')
             key = f"{fid}_ht_{hoje}"
             if key not in sent:
