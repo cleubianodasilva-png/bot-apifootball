@@ -351,14 +351,14 @@ def send_telegram(msg, botoes=True, reply_to=None, marca=None, home="", away="")
         if reply_to:
             payload["reply_to_message_id"] = reply_to
         if botoes:
-            import urllib.parse
-            query = urllib.parse.quote(f"{home} vs {away}") if home and away else ""
-            bet365_url   = "https://www.bet365.bet.br/#/AZ/"
-            paripesa_url = "https://paripesa.com/pt/live"
-            payload["reply_markup"] = json.dumps({"inline_keyboard": [[
-                {"text": "🟣 BET365",   "url": bet365_url},
-                {"text": "🔵 PARIPESA", "url": paripesa_url}
-            ]]})
+            bet365_url   = "https://www.bet365.com/#/AS/B1/"
+            paripesa_url = "https://paripesa.com/br"
+            payload["reply_markup"] = {
+                "inline_keyboard": [[
+                    {"text": "🟣 BET365",   "url": bet365_url},
+                    {"text": "🔵 PARIPESA", "url": paripesa_url}
+                ]]
+            }
         try:
             r = requests.post(url_send, json=payload, timeout=10)
             mid = r.json().get("result", {}).get("message_id")
