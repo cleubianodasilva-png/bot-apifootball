@@ -948,25 +948,23 @@ def calcular_prob_gols_ht(chutes_tot, chutes_gol, minuto):
     prob_15_ft = round((1 - _math.exp(-max(xg_total_ft - 1, 0.1))) * 100, 1)
     return prob_15_ft, prob_05_ht
 
+
 def filtrar_janelas(jogos):
     resultado = []
     for j in jogos:
         m = j["minuto"]
         p_raw = j["period"]
-        if isinstance(p_raw, str):
-            p = 2 if '2' in p_raw else 1
-        else:
-            p = p_raw
-            
+        p = 2 if (isinstance(p_raw, str) and '2' in p_raw) or p_raw == 2 else 1
+        
+        # Janelas mais flexíveis para compensar atraso de atualização das APIs
         em_janela = (
-            (p == 1 and 15 <= m <= 27) or
-            (p == 1 and 30 <= m <= 38) or
-            (p == 2 and 60 <= m <= 75) or
-            (p == 2 and 80 <= m <= 88)
+            (p == 1 and 13 <= m <= 40) or  # HT (Cobre Gol e Cantos)
+            (p == 2 and 58 <= m <= 90)     # FT (Cobre Gol, BTTS e Cantos)
         )
         if em_janela:
             resultado.append(j)
     return resultado
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # MENSAGEM PADRÃO
