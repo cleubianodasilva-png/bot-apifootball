@@ -1825,6 +1825,41 @@ def run():
         # Critério: Favorito amassando (mesmo que a odd seja maior que 1.50)
         fav_amassando = (chutes_gol_fav >= 2 or (chutes_gol_fav >= 1 and chutes_tot_fav >= 4))
 
+        # --- CÁLCULO DINÂMICO DE CRITÉRIOS ---
+        n_crit = 0
+        if fav_final: n_crit += 1
+        if (p == 1 and m >= 15) or (p == 2 and m >= 60): n_crit += 1
+        if (fav_empatando or fav_perdendo_1): n_crit += 1
+        if red_fav == 0: n_crit += 1
+        if fav_amassando: n_crit += 1
+        if ambas_pressionando: n_crit += 1
+        n_crit = max(4, min(6, n_crit))
+
+
+        # --- CÁLCULO DINÂMICO DE CRITÉRIOS (Total 6) ---
+        n_crit = 0
+        if fav_final: n_crit += 1 # 1. Favorito Identificado
+        if p == 1: n_crit += 1    # 2. Tempo de jogo correto (HT)
+        if p == 2: n_crit += 1    # 2. Tempo de jogo correto (FT)
+        if (fav_empatando or fav_perdendo_1): n_crit += 1 # 3. Cenário de Placar favorável
+        if red_fav == 0: n_crit += 1 # 4. Sem Cartão Vermelho no Favorito
+        if fav_amassando: n_crit += 1 # 5. Pressão do Favorito
+        if ambas_pressionando: n_crit += 1 # 6. Intensidade Ambas Equipes
+        n_crit = min(6, n_crit)
+
+
+        # --- CÁLCULO DINÂMICO DE CRITÉRIOS (Total 6) ---
+        n_crit = 0
+        if fav_final: n_crit += 1 # 1. Favorito Identificado
+        if p == 1: n_crit += 1    # 2. Tempo de jogo correto (HT)
+        if p == 2: n_crit += 1    # 2. Tempo de jogo correto (FT)
+        if (fav_empatando or fav_perdendo_1): n_crit += 1 # 3. Cenário de Placar favorável
+        if red_fav == 0: n_crit += 1 # 4. Sem Cartão Vermelho no Favorito
+        if fav_amassando: n_crit += 1 # 5. Pressão do Favorito
+        if ambas_pressionando: n_crit += 1 # 6. Intensidade Ambas Equipes
+        n_crit = min(6, n_crit)
+
+
         
         # --- DEFINIÇÃO DE PRESSÃO (APPM E CHUTES) ---
         chutes_gol_h = stats.get("chutes_gol_h", 0) if stats else 0
@@ -1843,22 +1878,40 @@ def run():
         # Critério: Favorito amassando (mesmo que a odd seja maior que 1.50)
         fav_amassando = (chutes_gol_fav >= 2 or (chutes_gol_fav >= 1 and chutes_tot_fav >= 4))
 
-        
-        # --- DEFINIÇÃO DE PRESSÃO (APPM E CHUTES) ---
-        chutes_gol_h = stats.get("chutes_gol_h", 0) if stats else 0
-        chutes_gol_a = stats.get("chutes_gol_a", 0) if stats else 0
-        chutes_tot_h = stats.get("chutes_tot_h", 0) if stats else 0
-        chutes_tot_a = stats.get("chutes_tot_a", 0) if stats else 0
-        
-        # Pressão do Favorito
-        chutes_gol_fav = chutes_gol_h if fav_final == "h" else chutes_gol_a
-        chutes_tot_fav = chutes_tot_h if fav_final == "h" else chutes_tot_a
-        
-        # Critério: Ambas as equipes pressionando
-        ambas_pressionando = (chutes_gol_h >= 1 and chutes_gol_a >= 1 and (chutes_tot_h + chutes_tot_a) >= 4)
-        
-        # Critério: Favorito amassando
-        fav_amassando = (chutes_gol_fav >= 2 or (chutes_gol_fav >= 1 and chutes_tot_fav >= 4))
+        # --- CÁLCULO DINÂMICO DE CRITÉRIOS ---
+        n_crit = 0
+        if fav_final: n_crit += 1
+        if (p == 1 and m >= 15) or (p == 2 and m >= 60): n_crit += 1
+        if (fav_empatando or fav_perdendo_1): n_crit += 1
+        if red_fav == 0: n_crit += 1
+        if fav_amassando: n_crit += 1
+        if ambas_pressionando: n_crit += 1
+        n_crit = max(4, min(6, n_crit))
+
+
+        # --- CÁLCULO DINÂMICO DE CRITÉRIOS (Total 6) ---
+        n_crit = 0
+        if fav_final: n_crit += 1 # 1. Favorito Identificado
+        if p == 1: n_crit += 1    # 2. Tempo de jogo correto (HT)
+        if p == 2: n_crit += 1    # 2. Tempo de jogo correto (FT)
+        if (fav_empatando or fav_perdendo_1): n_crit += 1 # 3. Cenário de Placar favorável
+        if red_fav == 0: n_crit += 1 # 4. Sem Cartão Vermelho no Favorito
+        if fav_amassando: n_crit += 1 # 5. Pressão do Favorito
+        if ambas_pressionando: n_crit += 1 # 6. Intensidade Ambas Equipes
+        n_crit = min(6, n_crit)
+
+
+        # --- CÁLCULO DINÂMICO DE CRITÉRIOS (Total 6) ---
+        n_crit = 0
+        if fav_final: n_crit += 1 # 1. Favorito Identificado
+        if p == 1: n_crit += 1    # 2. Tempo de jogo correto (HT)
+        if p == 2: n_crit += 1    # 2. Tempo de jogo correto (FT)
+        if (fav_empatando or fav_perdendo_1): n_crit += 1 # 3. Cenário de Placar favorável
+        if red_fav == 0: n_crit += 1 # 4. Sem Cartão Vermelho no Favorito
+        if fav_amassando: n_crit += 1 # 5. Pressão do Favorito
+        if ambas_pressionando: n_crit += 1 # 6. Intensidade Ambas Equipes
+        n_crit = min(6, n_crit)
+
 
         
         # --- DEFINIÇÃO DE PRESSÃO (APPM E CHUTES) ---
@@ -1876,6 +1929,93 @@ def run():
         
         # Critério: Favorito amassando
         fav_amassando = (chutes_gol_fav >= 2 or (chutes_gol_fav >= 1 and chutes_tot_fav >= 4))
+
+        # --- CÁLCULO DINÂMICO DE CRITÉRIOS ---
+        n_crit = 0
+        if fav_final: n_crit += 1
+        if (p == 1 and m >= 15) or (p == 2 and m >= 60): n_crit += 1
+        if (fav_empatando or fav_perdendo_1): n_crit += 1
+        if red_fav == 0: n_crit += 1
+        if fav_amassando: n_crit += 1
+        if ambas_pressionando: n_crit += 1
+        n_crit = max(4, min(6, n_crit))
+
+
+        # --- CÁLCULO DINÂMICO DE CRITÉRIOS (Total 6) ---
+        n_crit = 0
+        if fav_final: n_crit += 1 # 1. Favorito Identificado
+        if p == 1: n_crit += 1    # 2. Tempo de jogo correto (HT)
+        if p == 2: n_crit += 1    # 2. Tempo de jogo correto (FT)
+        if (fav_empatando or fav_perdendo_1): n_crit += 1 # 3. Cenário de Placar favorável
+        if red_fav == 0: n_crit += 1 # 4. Sem Cartão Vermelho no Favorito
+        if fav_amassando: n_crit += 1 # 5. Pressão do Favorito
+        if ambas_pressionando: n_crit += 1 # 6. Intensidade Ambas Equipes
+        n_crit = min(6, n_crit)
+
+
+        # --- CÁLCULO DINÂMICO DE CRITÉRIOS (Total 6) ---
+        n_crit = 0
+        if fav_final: n_crit += 1 # 1. Favorito Identificado
+        if p == 1: n_crit += 1    # 2. Tempo de jogo correto (HT)
+        if p == 2: n_crit += 1    # 2. Tempo de jogo correto (FT)
+        if (fav_empatando or fav_perdendo_1): n_crit += 1 # 3. Cenário de Placar favorável
+        if red_fav == 0: n_crit += 1 # 4. Sem Cartão Vermelho no Favorito
+        if fav_amassando: n_crit += 1 # 5. Pressão do Favorito
+        if ambas_pressionando: n_crit += 1 # 6. Intensidade Ambas Equipes
+        n_crit = min(6, n_crit)
+
+
+        
+        # --- DEFINIÇÃO DE PRESSÃO (APPM E CHUTES) ---
+        chutes_gol_h = stats.get("chutes_gol_h", 0) if stats else 0
+        chutes_gol_a = stats.get("chutes_gol_a", 0) if stats else 0
+        chutes_tot_h = stats.get("chutes_tot_h", 0) if stats else 0
+        chutes_tot_a = stats.get("chutes_tot_a", 0) if stats else 0
+        
+        # Pressão do Favorito
+        chutes_gol_fav = chutes_gol_h if fav_final == "h" else chutes_gol_a
+        chutes_tot_fav = chutes_tot_h if fav_final == "h" else chutes_tot_a
+        
+        # Critério: Ambas as equipes pressionando
+        ambas_pressionando = (chutes_gol_h >= 1 and chutes_gol_a >= 1 and (chutes_tot_h + chutes_tot_a) >= 4)
+        
+        # Critério: Favorito amassando
+        fav_amassando = (chutes_gol_fav >= 2 or (chutes_gol_fav >= 1 and chutes_tot_fav >= 4))
+
+        # --- CÁLCULO DINÂMICO DE CRITÉRIOS ---
+        n_crit = 0
+        if fav_final: n_crit += 1
+        if (p == 1 and m >= 15) or (p == 2 and m >= 60): n_crit += 1
+        if (fav_empatando or fav_perdendo_1): n_crit += 1
+        if red_fav == 0: n_crit += 1
+        if fav_amassando: n_crit += 1
+        if ambas_pressionando: n_crit += 1
+        n_crit = max(4, min(6, n_crit))
+
+
+        # --- CÁLCULO DINÂMICO DE CRITÉRIOS (Total 6) ---
+        n_crit = 0
+        if fav_final: n_crit += 1 # 1. Favorito Identificado
+        if p == 1: n_crit += 1    # 2. Tempo de jogo correto (HT)
+        if p == 2: n_crit += 1    # 2. Tempo de jogo correto (FT)
+        if (fav_empatando or fav_perdendo_1): n_crit += 1 # 3. Cenário de Placar favorável
+        if red_fav == 0: n_crit += 1 # 4. Sem Cartão Vermelho no Favorito
+        if fav_amassando: n_crit += 1 # 5. Pressão do Favorito
+        if ambas_pressionando: n_crit += 1 # 6. Intensidade Ambas Equipes
+        n_crit = min(6, n_crit)
+
+
+        # --- CÁLCULO DINÂMICO DE CRITÉRIOS (Total 6) ---
+        n_crit = 0
+        if fav_final: n_crit += 1 # 1. Favorito Identificado
+        if p == 1: n_crit += 1    # 2. Tempo de jogo correto (HT)
+        if p == 2: n_crit += 1    # 2. Tempo de jogo correto (FT)
+        if (fav_empatando or fav_perdendo_1): n_crit += 1 # 3. Cenário de Placar favorável
+        if red_fav == 0: n_crit += 1 # 4. Sem Cartão Vermelho no Favorito
+        if fav_amassando: n_crit += 1 # 5. Pressão do Favorito
+        if ambas_pressionando: n_crit += 1 # 6. Intensidade Ambas Equipes
+        n_crit = min(6, n_crit)
+
 
         
         # --- DEFINICAO DE PRESSAO (APPM E CHUTES) ---
@@ -1894,13 +2034,48 @@ def run():
         # Criterio: Favorito amassando
         fav_amassando = (chutes_gol_fav >= 2 or (chutes_gol_fav >= 1 and chutes_tot_fav >= 4))
 
+        # --- CÁLCULO DINÂMICO DE CRITÉRIOS ---
+        n_crit = 0
+        if fav_final: n_crit += 1
+        if (p == 1 and m >= 15) or (p == 2 and m >= 60): n_crit += 1
+        if (fav_empatando or fav_perdendo_1): n_crit += 1
+        if red_fav == 0: n_crit += 1
+        if fav_amassando: n_crit += 1
+        if ambas_pressionando: n_crit += 1
+        n_crit = max(4, min(6, n_crit))
+
+
+        # --- CÁLCULO DINÂMICO DE CRITÉRIOS (Total 6) ---
+        n_crit = 0
+        if fav_final: n_crit += 1 # 1. Favorito Identificado
+        if p == 1: n_crit += 1    # 2. Tempo de jogo correto (HT)
+        if p == 2: n_crit += 1    # 2. Tempo de jogo correto (FT)
+        if (fav_empatando or fav_perdendo_1): n_crit += 1 # 3. Cenário de Placar favorável
+        if red_fav == 0: n_crit += 1 # 4. Sem Cartão Vermelho no Favorito
+        if fav_amassando: n_crit += 1 # 5. Pressão do Favorito
+        if ambas_pressionando: n_crit += 1 # 6. Intensidade Ambas Equipes
+        n_crit = min(6, n_crit)
+
+
+        # --- CÁLCULO DINÂMICO DE CRITÉRIOS (Total 6) ---
+        n_crit = 0
+        if fav_final: n_crit += 1 # 1. Favorito Identificado
+        if p == 1: n_crit += 1    # 2. Tempo de jogo correto (HT)
+        if p == 2: n_crit += 1    # 2. Tempo de jogo correto (FT)
+        if (fav_empatando or fav_perdendo_1): n_crit += 1 # 3. Cenário de Placar favorável
+        if red_fav == 0: n_crit += 1 # 4. Sem Cartão Vermelho no Favorito
+        if fav_amassando: n_crit += 1 # 5. Pressão do Favorito
+        if ambas_pressionando: n_crit += 1 # 6. Intensidade Ambas Equipes
+        n_crit = min(6, n_crit)
+
+
         # MERCADO 1: OVER 0.5 HT (15-27 min, 0x0, red_fav == 0)
         if p == 1 and 15 <= m <= 27 and sh == 0 and sa == 0 and red_fav == 0:
             if fav_amassando or ambas_pressionando:
                 hoje = datetime.now(BRT).strftime('%Y%m%d')
                 key = f"{fid}_ht_{hoje}"
                 if key not in sent:
-                    mid = send_telegram(msg_universal(h, a, m, liga, 3, "HT", "Over 0.5 HT", placar, stats=stats, sh=sh, sa=sa, fav_final=fav_final), marca=key, home=h, away=a)
+                    mid = send_telegram(msg_universal(h, a, m, liga, n_crit, "HT", "Over 0.5 HT", placar, stats=stats, sh=sh, sa=sa, fav_final=fav_final), marca=key, home=h, away=a)
                     if mid:
                         sent.add(key); total_env += 1
                         registrar_sinal(fid, "HT", h, a, mid)
@@ -1919,7 +2094,7 @@ def run():
                 hoje = datetime.now(BRT).strftime('%Y%m%d')
                 key = f"{fid}_limiteht_{hoje}"
                 if key not in sent:
-                    mid = send_telegram(msg_universal(h, a, m, liga, 4, "LIMITEHT", "Over 0.5 HT", placar, stats=stats, sh=sh, sa=sa, fav_final=fav_final), marca=key, home=h, away=a)
+                    mid = send_telegram(msg_universal(h, a, m, liga, n_crit, "LIMITEHT", "Over 0.5 HT", placar, stats=stats, sh=sh, sa=sa, fav_final=fav_final), marca=key, home=h, away=a)
                     if mid:
                         sent.add(key); total_env += 1
                         registrar_sinal(fid, "LIMITEHT", h, a, mid)
@@ -1934,7 +2109,7 @@ def run():
             hoje = datetime.now(BRT).strftime('%Y%m%d')
             key = f"{fid}_btts_{hoje}"
             if key not in sent:
-                mid = send_telegram(msg_universal(h, a, m, liga, 4, "BTTS", "Ambas Marcam", placar, stats=stats, sh=sh, sa=sa, fav_final=fav_final), marca=key, home=h, away=a)
+                mid = send_telegram(msg_universal(h, a, m, liga, n_crit, "BTTS", "Ambas Marcam", placar, stats=stats, sh=sh, sa=sa, fav_final=fav_final), marca=key, home=h, away=a)
                 if mid:
                     sent.add(key); total_env += 1
                     registrar_sinal(fid, "BTTS", h, a, mid)
@@ -1944,7 +2119,7 @@ def run():
             hoje = datetime.now(BRT).strftime('%Y%m%d')
             key = f"{fid}_oft_{hoje}"
             if key not in sent:
-                mid = send_telegram(msg_universal(h, a, m, liga, 4, "OFT", "Over 1.5 FT", placar, stats=stats, sh=sh, sa=sa, fav_final=fav_final), marca=key, home=h, away=a)
+                mid = send_telegram(msg_universal(h, a, m, liga, n_crit, "OFT", "Over 1.5 FT", placar, stats=stats, sh=sh, sa=sa, fav_final=fav_final), marca=key, home=h, away=a)
                 if mid:
                     sent.add(key); total_env += 1
                     registrar_sinal(fid, "OFT", h, a, mid)
@@ -1973,7 +2148,7 @@ def run():
                     else: linha_over = f"Over {total_gols + 0.5:.1f} FT"
                     
                     if key not in sent:
-                        mid = send_telegram(msg_universal(h, a, m, liga, 4, "OVERGOAL", linha_over, placar, stats=stats, sh=sh, sa=sa, fav_final=fav_final), marca=key, home=h, away=a)
+                        mid = send_telegram(msg_universal(h, a, m, liga, n_crit, "OVERGOAL", linha_over, placar, stats=stats, sh=sh, sa=sa, fav_final=fav_final), marca=key, home=h, away=a)
                         if mid:
                             sent.add(key); total_env += 1
                             registrar_sinal(fid, "OVERGOAL", h, a, mid, extra_val=total_gols)
@@ -1994,7 +2169,7 @@ def run():
             if cantos < 0:
                 print(f"[SKIP-CORNER-HT] {h} x {a} — escanteios sem dado real, pulando")
             elif key not in sent:
-                mid = send_telegram(msg_universal(h, a, m, liga, 5, "CORNER_HT", "", placar, cantos_atual=cantos, stats=stats, sh=sh, sa=sa, fav_final=fav_final), marca=key, home=h, away=a)
+                mid = send_telegram(msg_universal(h, a, m, liga, n_crit, "CORNER_HT", "", placar, cantos_atual=cantos, stats=stats, sh=sh, sa=sa, fav_final=fav_final), marca=key, home=h, away=a)
                 if mid:
                     sent.add(key); total_env += 1
                     registrar_sinal(fid, "CORNER_HT", h, a, mid, extra_val=cantos)
@@ -2009,7 +2184,7 @@ def run():
             if cantos < 0:
                 print(f"[SKIP-CORNER-FT] {h} x {a} — escanteios sem dado real, pulando")
             elif key not in sent:
-                mid = send_telegram(msg_universal(h, a, m, liga, 5, "CORNER_FT", "", placar, cantos_atual=cantos, stats=stats, sh=sh, sa=sa, fav_final=fav_final), marca=key, home=h, away=a)
+                mid = send_telegram(msg_universal(h, a, m, liga, n_crit, "CORNER_FT", "", placar, cantos_atual=cantos, stats=stats, sh=sh, sa=sa, fav_final=fav_final), marca=key, home=h, away=a)
                 if mid:
                     sent.add(key); total_env += 1
                     registrar_sinal(fid, "CORNER_FT", h, a, mid, extra_val=cantos)
