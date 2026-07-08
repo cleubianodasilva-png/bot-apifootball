@@ -1963,33 +1963,34 @@ def run():
         
         
         
+        
+        
+        
         # MERCADO 4: OVER GOL PARTIDA (60-75 min, red_fav == 0)
         if p == 2 and 60 <= m <= 75 and red_fav == 0:
-            # Condicao baseada no placar
-            is_0x0 = (sh == 0 and sa == 0)
+            # Condicao: Empatado (0x0, 1x1, 2x2...) ou Zebra ganhando (Fav perdendo por 1)
+            fav_perdendo_1_exato = (adv_gols_oft - fav_gols_oft) == 1
             
-            # Se 0x0: Aceita (Fav Amassando) OU (Ambas Pressionando)
-            if is_0x0:
-                pode_enviar = (fav_amassando or ambas_pressionando)
-            else:
-                # Outros placares: Apenas se (Fav perdendo ou empatando) E (Fav Amassando)
-                pode_enviar = (fav_empatando or fav_perdendo_1_livre) and fav_amassando
+            # Se EMPATADO ou FAV PERDENDO POR 1: Aceita (Fav Amassando) OU (Ambas Pressionando)
+            if fav_empatando or fav_perdendo_1_exato:
+                if fav_amassando or ambas_pressionando:
+                    hoje = datetime.now(BRT).strftime('%Y%m%d')
+                    key = f"{fid}_overgoal_{hoje}"
+                    total_gols = sh + sa
+                    if total_gols == 0: linha_over = "Over 0.5 FT"
+                    elif total_gols == 1: linha_over = "Over 1.5 FT"
+                    elif total_gols == 2: linha_over = "Over 2.5 FT"
+                    elif total_gols == 3: linha_over = "Over 3.5 FT"
+                    else: linha_over = f"Over {total_gols + 0.5:.1f} FT"
+                    
+                    if key not in sent:
+                        mid = send_telegram(msg_universal(h, a, m, liga, 4, "OVERGOAL", linha_over, placar, stats=stats, sh=sh, sa=sa, fav_final=fav_final), marca=key, home=h, away=a)
+                        if mid:
+                            sent.add(key); total_env += 1
+                            registrar_sinal(fid, "OVERGOAL", h, a, mid, extra_val=total_gols)
 
-            if pode_enviar:
-                hoje = datetime.now(BRT).strftime('%Y%m%d')
-                key = f"{fid}_overgoal_{hoje}"
-                total_gols = sh + sa
-                if total_gols == 0: linha_over = "Over 0.5 FT"
-                elif total_gols == 1: linha_over = "Over 1.5 FT"
-                elif total_gols == 2: linha_over = "Over 2.5 FT"
-                elif total_gols == 3: linha_over = "Over 3.5 FT"
-                else: linha_over = f"Over {total_gols + 0.5:.1f} FT"
-                
-                if key not in sent:
-                    mid = send_telegram(msg_universal(h, a, m, liga, 4, "OVERGOAL", linha_over, placar, stats=stats, sh=sh, sa=sa, fav_final=fav_final), marca=key, home=h, away=a)
-                    if mid:
-                        sent.add(key); total_env += 1
-                        registrar_sinal(fid, "OVERGOAL", h, a, mid, extra_val=total_gols)
+
+
 
 
 
