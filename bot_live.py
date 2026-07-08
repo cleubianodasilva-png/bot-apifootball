@@ -28,7 +28,7 @@ API_FOOTBALL_KEYS = ["312c2ecc90136b390d19c765711088d8121b195418b9c2e8006b9e8f7e
 API_FOOTBALL_URL = "https://apiv3.apifootball.com"
 
 # ESPN (principal — pública, sem chave, sem limite)
-ESPN_SCOREBOARD = "https://site.api.espn.com/apis/site/v2/sports/soccer/{liga}/scoreboard"
+ESPN_SCOREBOARD = "https://site.api.espn.com/apis/site/v2/sports/soccer/all/scoreboard"
 ESPN_SUMMARY    = "https://site.api.espn.com/apis/site/v2/sports/soccer/all/summary"
 
 # Mapeamento de fallback para slugs sem nome retornado pela ESPN
@@ -311,10 +311,10 @@ RAPIDAPI_HEADERS = {
 
 # URLs Oficiais das APIs (Conforme Documentação)
 BZZOIRO_URL      = "https://sports.bzzoiro.com"
-APIFOOTBALL_URL  = "https://apiv3.apifootball.com"
+APIFOOTBALL_URL = "https://apiv3.apifootball.com/"
 
 # APIs Secundárias (Ativas)
-APIFOOTBALL_COM_KEY = "312c2ecc90136b390d19c765711088d8121b195418b9c2e8006b9e8f7ed8e4ed"
+APIFOOTBALL_KEY = "312c2ecc90136b390d19c765711088d8121b195418b9c2e8006b9e8f7ed8e4ed"
 BZZOIRO_TOKEN   = "0c594407931777d114db6c3ccaefea54fa10c0ef"
 BZZOIRO_URL     = "https://sports.bzzoiro.com"
 
@@ -322,10 +322,10 @@ BZZOIRO_URL     = "https://sports.bzzoiro.com"
 
 # URLs Oficiais das APIs (Conforme Documentação)
 BZZOIRO_URL      = "https://sports.bzzoiro.com"
-APIFOOTBALL_URL  = "https://apiv3.apifootball.com"
+APIFOOTBALL_URL = "https://apiv3.apifootball.com/"
 
 # APIs Secundárias (Ativas)
-APIFOOTBALL_COM_KEY = "312c2ecc90136b390d19c765711088d8121b195418b9c2e8006b9e8f7ed8e4ed"
+APIFOOTBALL_KEY = "312c2ecc90136b390d19c765711088d8121b195418b9c2e8006b9e8f7ed8e4ed"
 BZZOIRO_TOKEN   = "0c594407931777d114db6c3ccaefea54fa10c0ef"
 BZZOIRO_URL     = "https://sports.bzzoiro.com"
 
@@ -333,10 +333,10 @@ BZZOIRO_URL     = "https://sports.bzzoiro.com"
 
 # URLs Oficiais das APIs (Conforme Documentação)
 BZZOIRO_URL      = "https://sports.bzzoiro.com"
-APIFOOTBALL_URL  = "https://apiv3.apifootball.com"
+APIFOOTBALL_URL = "https://apiv3.apifootball.com/"
 
 # APIs Secundárias (Ativas)
-APIFOOTBALL_COM_KEY = "312c2ecc90136b390d19c765711088d8121b195418b9c2e8006b9e8f7ed8e4ed"
+APIFOOTBALL_KEY = "312c2ecc90136b390d19c765711088d8121b195418b9c2e8006b9e8f7ed8e4ed"
 BZZOIRO_TOKEN   = "0c594407931777d114db6c3ccaefea54fa10c0ef"
 BZZOIRO_URL     = "https://sports.bzzoiro.com"
 
