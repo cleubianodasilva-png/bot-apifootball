@@ -821,39 +821,46 @@ def _moneyline_to_decimal(ml):
         return 99.0
 
 def get_favorito_odds(home, away, fid=None, league=None):
-    """Retorna 'h' ou 'a' baseado na menor odd. Usa ESPN, Bzzoiro e API-Football."""
-    # Tenta ESPN (grátis, sem cota)
+    """Retorna 'h' ou 'a' baseado na menor odd. Prioridade: 1.ESPN, 2.APIFootball, 3.Bzzoiro."""
+    # 1. Tenta ESPN (grátis)
     if fid and league:
         try:
             url = f"https://site.api.espn.com/apis/site/v2/sports/soccer/{league}/scoreboard"
             r = requests.get(url, timeout=6)
             for ev in r.json().get("events", []):
                 comp = ev.get("competitions", [{}])[0]
-                ev_fid = str(comp.get("id", ""))
-                if ev_fid != str(fid):
-                    continue
-                odds_list = comp.get("odds", [])
-                for odd in odds_list:
-                    if not odd:
-                        continue
+                if str(comp.get("id", "")) != str(fid): continue
+                for odd in comp.get("odds", []):
                     ml = odd.get("moneyline", {})
                     if ml:
-                        # Tenta current (ao vivo), depois close (pré-jogo), depois open
                         def _get_ml(side):
                             for key in ("close", "open", "current"):
                                 v = ml.get(side, {}).get(key, {}).get("odds")
-                                if v:
-                                    return v
+                                if v: return v
                             return 99
-                        odd_h = _moneyline_to_decimal(_get_ml("home"))
-                        odd_a = _moneyline_to_decimal(_get_ml("away"))
+                        odd_h, odd_a = _moneyline_to_decimal(_get_ml("home")), _moneyline_to_decimal(_get_ml("away"))
                         if odd_h < 90 and odd_a < 90:
                             fav = "h" if odd_h <= odd_a else "a"
                             print(f"[ODDS-ESPN] {home} x {away} | Casa:{odd_h} Fora:{odd_a} → Fav:{fav}")
                             return fav
-        except Exception as e:
-            print(f"[ODDS-ESPN] Erro: {e}")
-    # Fallback Bzzoiro Odds
+        except: pass
+
+    # 2. Fallback APIfootball.com (v3)
+    if fid and str(fid).startswith("apfc_"):
+        try:
+            match_id = str(fid).replace("apfc_","")
+            r = requests.get("https://apiv3.apifootball.com/", params={"action": "get_odds", "match_id": match_id, "APIkey": APIFOOTBALL_COM_KEY}, timeout=8)
+            odds_data = r.json()
+            if isinstance(odds_data, list) and odds_data:
+                odd = odds_data[0]
+                odd_h, odd_a = float(odd.get("odd_1", 0) or 0), float(odd.get("odd_2", 0) or 0)
+                if odd_h > 1 and odd_a > 1:
+                    fav = "h" if odd_h <= odd_a else "a"
+                    print(f"[ODDS-APFC] {home} x {away} | Casa:{odd_h} Fora:{odd_a} → Fav:{fav}")
+                    return fav
+        except: pass
+
+    # 3. Fallback Bzzoiro Odds
     if fid and str(fid).startswith("bzz_"):
         try:
             fid_raw = str(fid).replace("bzz_", "")
@@ -861,69 +868,23 @@ def get_favorito_odds(home, away, fid=None, league=None):
             r = requests.get(f"{BZZOIRO_URL}/api/v2/events/{fid_raw}/odds/pre-live/", headers=headers, timeout=8)
             if r.status_code == 200:
                 data = r.json()
-                # Procura mercado 1x2 (H2H)
                 for mkt in data.get("odds", []):
                     if mkt.get("name") in ("1x2", "Full Time Result"):
                         choices = {c.get("name"): float(c.get("value", 99)) for c in mkt.get("choices", [])}
-                        odd_h = choices.get("1", 99)
-                        odd_a = choices.get("2", 99)
+                        odd_h, odd_a = choices.get("1", 99), choices.get("2", 99)
                         if odd_h < 90 and odd_a < 90:
                             fav = "h" if odd_h <= odd_a else "a"
                             print(f"[ODDS-BZZ] {home} x {away} | Casa:{odd_h} Fora:{odd_a} → Fav:{fav}")
                             return fav
-        except:
-            pass
-    
+        except: pass
 
-    # Fallback 2: APIfootball.com odds (quando fid for do apifootball)
-    if fid and str(fid).replace("apfc_","").isdigit():
-        try:
-            match_id = str(fid).replace("apfc_","")
-            r = requests.get("https://apiv3.apifootball.com/",
-                             params={"action": "get_odds", "match_id": match_id,
-                                     "APIkey": APIFOOTBALL_COM_KEY}, timeout=8)
-            odds_data = r.json()
-            if isinstance(odds_data, list) and odds_data:
-                odd = odds_data[0]
-                try:
-                    odd_h = float(odd.get("odd_1", 0) or 0)
-                    odd_a = float(odd.get("odd_2", 0) or 0)
-                    if odd_h > 1 and odd_a > 1:
-                        fav = "h" if odd_h <= odd_a else "a"
-                        print(f"[ODDS-APFC] {home} x {away} | Casa:{odd_h} Fora:{odd_a} → Fav:{fav}")
-                        return fav
-                except:
-                    pass
-        except Exception as e:
-            print(f"[ODDS-APFC] Erro: {e}")
-
-    # Fallback 3: Odds API (quando tiver cota)
-    try:
-        r = requests.get("https://api.the-odds-api.com/v4/sports/soccer/odds/",
-                         params={"apiKey": ODDS_API_KEY, "regions": "eu",
-                                 "markets": "h2h", "oddsFormat": "decimal"}, timeout=10)
-        if r.status_code == 200:
-            for evento in r.json():
-                nomes = [evento.get("home_team","").lower(), evento.get("away_team","").lower()]
-                if home.lower() in nomes and away.lower() in nomes:
-                    for book in evento.get("bookmakers", []):
-                        for mkt in book.get("markets", []):
-                            if mkt["key"] == "h2h":
-                                outcomes = {o["name"].lower(): o["price"] for o in mkt["outcomes"]}
-                                odd_h = outcomes.get(home.lower(), 99)
-                                odd_a = outcomes.get(away.lower(), 99)
-                                fav = "h" if odd_h <= odd_a else "a"
-                                print(f"[ODDS-API] {home} x {away} | Casa:{odd_h} Fora:{odd_a} → Fav:{fav}")
-                                return fav
-    except:
-        pass
     return None
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # FILTRO DE JANELAS
 # ═══════════════════════════════════════════════════════════════════════════════
 def get_odd_favorito_num(home, away, fid=None, league=None):
-    """Retorna a odd decimal do favorito (numero). Usa ESPN, Bzzoiro e API-Football."""
+    """Retorna a odd decimal do favorito (numero). Prioridade: 1.ESPN, 2.APIFootball, 3.Bzzoiro."""
     if fid and league:
         try:
             url = f"https://site.api.espn.com/apis/site/v2/sports/soccer/{league}/scoreboard"
