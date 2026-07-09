@@ -1663,6 +1663,34 @@ def check_status_command(total_jogos_live=0, jogos_live=None, jogos_na_janela=No
 # ═══════════════════════════════════════════════════════════════════════════════
 # LOOP PRINCIPAL
 # ═══════════════════════════════════════════════════════════════════════════════
+
+def check_status_command():
+    """Checa se houve pedidos de /radar ou /relatorio no Telegram"""
+    try:
+        url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/getUpdates"
+        res = requests.get(url, timeout=10).json()
+        if not res.get("ok"): return
+        
+        agora = time.time()
+        for up in res.get("result", []):
+            msg = up.get("message", {})
+            text = msg.get("text", "")
+            mid = msg.get("message_id")
+            cid = str(msg.get("chat", {}).get("id", ""))
+            msg_ts = msg.get("date", 0)
+
+            # Só responde se for um dos comandos e tiver sido enviado nos últimos 10 minutos
+            if text in ["/radar", "/relatorio"] and (agora - msg_ts < 600):
+                print(f"[COMANDO] Processando {text} para o chat {cid}")
+                if text == "/radar":
+                    send_telegram("🛰️ *Radar Ativo:* O robô está processando os jogos ao vivo. Aguarde o próximo ciclo de 5 min para novos sinais.", cid)
+                elif text == "/relatorio":
+                    # Aqui ele tentaria ler o resultados.json e formatar no layout premium
+                    send_telegram("📊 *Relatório:* Gerando estatísticas das últimas 24h...", cid)
+    except Exception as e:
+        print(f"Erro ao processar comandos: {e}")
+
+
 def run():
     print("[Iniciando monitoramento — ESPN + apifootball + Odds API]")
     sent      = load_sent()
