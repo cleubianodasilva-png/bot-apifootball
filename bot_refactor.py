@@ -420,35 +420,35 @@ RAPIDAPI_HEADERS = {
 
 
 # URLs Oficiais das APIs (Conforme Documentação)
-BZZOIRO_URL = "https://esportesbzzoiro.com"
+BZZOIRO_URL = "https://sports.bzzoiro.com"
 APIFOOTBALL_URL  = "https://apiv3.apifootball.com"
 
 # APIs Secundárias (Ativas)
 APIFOOTBALL_COM_KEY = os.getenv("APIFOOTBALL_KEY")
 BZZOIRO_TOKEN = os.getenv("BZZOIRO_TOKEN")
-BZZOIRO_URL = "https://esportesbzzoiro.com"
+BZZOIRO_URL = "https://sports.bzzoiro.com"
 
 
 
 # URLs Oficiais das APIs (Conforme Documentação)
-BZZOIRO_URL = "https://esportesbzzoiro.com"
+BZZOIRO_URL = "https://sports.bzzoiro.com"
 APIFOOTBALL_URL  = "https://apiv3.apifootball.com"
 
 # APIs Secundárias (Ativas)
 APIFOOTBALL_COM_KEY = os.getenv("APIFOOTBALL_KEY")
 BZZOIRO_TOKEN = os.getenv("BZZOIRO_TOKEN")
-BZZOIRO_URL = "https://esportesbzzoiro.com"
+BZZOIRO_URL = "https://sports.bzzoiro.com"
 
 
 
 # URLs Oficiais das APIs (Conforme Documentação)
-BZZOIRO_URL = "https://esportesbzzoiro.com"
+BZZOIRO_URL = "https://sports.bzzoiro.com"
 APIFOOTBALL_URL  = "https://apiv3.apifootball.com"
 
 # APIs Secundárias (Ativas)
 APIFOOTBALL_COM_KEY = os.getenv("APIFOOTBALL_KEY")
 BZZOIRO_TOKEN = os.getenv("BZZOIRO_TOKEN")
-BZZOIRO_URL = "https://esportesbzzoiro.com"
+BZZOIRO_URL = "https://sports.bzzoiro.com"
 
 # ═══════════════+++
 # TELEGRAM
@@ -1812,9 +1812,12 @@ def run():
     # PASSO 1B: apifootball preenche o que ESPN não cobre
     jogos_apif = get_jogos_apifootball_v3(fids_espn)
 
+    # PASSO 1C: Bzzoiro preenche o que os outros não cobrem
+    jogos_bzz = get_jogos_bzzoiro(fids_espn | {j["fid"] for j in jogos_apif})
+
     # Junta tudo — ESPN tem prioridade (stats mais ricas via summary)
-    jogos_live = jogos_espn + jogos_apif
-    print(f"[Total] {len(jogos_live)} jogos ao vivo (ESPN={len(jogos_espn)} + apifootball={len(jogos_apif)})")
+    jogos_live = jogos_espn + jogos_apif + jogos_bzz
+    print(f"[Total] {len(jogos_live)} jogos ao vivo (ESPN={len(jogos_espn)} + apifootball={len(jogos_apif)} + bzzoiro={len(jogos_bzz)})")
 
     # PASSO 2: Filtra janelas alvo
     jogos_na_janela = filtrar_janelas(jogos_live)
