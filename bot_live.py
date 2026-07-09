@@ -813,7 +813,7 @@ def get_stats_apifootball_live(fid):
 def get_jogos_apifootball_v3(fids_existentes):
     try:
         # action=get_events com match_live=1 retorna jogos ao vivo
-        params = {"action": "get_events", "match_live": "1", "APIkey": APIFOOTBALL_COM_KEY}
+        params = {"action": "get_events", "match_live": "1", "APIkey": APIFOOTBALL_KEY}
         r = requests.get(APIFOOTBALL_URL, params=params, timeout=15)
         data = r.json()
         if not isinstance(data, list): return []
@@ -864,7 +864,7 @@ def get_jogos_bzzoiro(fids_existentes):
 
 def get_stats_apifootball_v3(match_id):
     """Busca estatísticas detalhadas no endpoint get_statistics (mais confiável)."""
-    url = f"https://apiv3.apifootball.com/?action=get_statistics&match_id={match_id}&APIkey={APIFOOTBALL_COM_KEY}"
+    url = f"https://apiv3.apifootball.com/?action=get_statistics&match_id={match_id}&APIkey={APIFOOTBALL_KEY}"
     try:
         r = requests.get(url, timeout=10)
         data = r.json()
@@ -964,7 +964,7 @@ def filtrar_janelas(jogos):
             (p == 2 and 60 <= m <= 75) or # BTTS / Over 1.5 / Over Gol Partida
             (p == 2 and 80 <= m <= 88)    # Escanteio FT
         )
-        if em_janela:
+        if True:
             resultado.append(j)
     return resultado
 
@@ -1326,7 +1326,13 @@ def run():
         
         # BUSCA DE ESTATÍSTICAS PROFUNDAS
 
+        
+        print(f"--- Analisando {h} x {a} ---")
         stats = get_stats_apifootball_v3(j.get("fid_raw", fid))
+        print(f"  Stats: {'OK' if stats else 'Vazio'}")
+        fav_final = get_odd_favorito_num(h, a, fid=fid, league=j.get("liga_slug", liga))
+        print(f"  Fav: {fav_final}")
+
         if not stats:
             if source == "bzzoiro": stats = get_stats_bzzoiro(j["fid_raw"], h, a)
             else: stats = get_stats_espn(fid, h, a)
