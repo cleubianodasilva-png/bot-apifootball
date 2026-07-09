@@ -417,35 +417,35 @@ RAPIDAPI_HEADERS = {
 
 
 # URLs Oficiais das APIs (Conforme Documentação)
-BZZOIRO_URL = "https://sports.bzzoiro.com"
+BZZOIRO_URL = "https://esportesbzzoiro.com"
 APIFOOTBALL_URL  = "https://apiv3.apifootball.com"
 
 # APIs Secundárias (Ativas)
 APIFOOTBALL_COM_KEY = os.getenv("APIFOOTBALL_KEY")
 BZZOIRO_TOKEN = os.getenv("BZZOIRO_TOKEN")
-BZZOIRO_URL = "https://sports.bzzoiro.com"
+BZZOIRO_URL = "https://esportesbzzoiro.com"
 
 
 
 # URLs Oficiais das APIs (Conforme Documentação)
-BZZOIRO_URL = "https://sports.bzzoiro.com"
+BZZOIRO_URL = "https://esportesbzzoiro.com"
 APIFOOTBALL_URL  = "https://apiv3.apifootball.com"
 
 # APIs Secundárias (Ativas)
 APIFOOTBALL_COM_KEY = os.getenv("APIFOOTBALL_KEY")
 BZZOIRO_TOKEN = os.getenv("BZZOIRO_TOKEN")
-BZZOIRO_URL = "https://sports.bzzoiro.com"
+BZZOIRO_URL = "https://esportesbzzoiro.com"
 
 
 
 # URLs Oficiais das APIs (Conforme Documentação)
-BZZOIRO_URL = "https://sports.bzzoiro.com"
+BZZOIRO_URL = "https://esportesbzzoiro.com"
 APIFOOTBALL_URL  = "https://apiv3.apifootball.com"
 
 # APIs Secundárias (Ativas)
 APIFOOTBALL_COM_KEY = os.getenv("APIFOOTBALL_KEY")
 BZZOIRO_TOKEN = os.getenv("BZZOIRO_TOKEN")
-BZZOIRO_URL = "https://sports.bzzoiro.com"
+BZZOIRO_URL = "https://esportesbzzoiro.com"
 
 # ═══════════════+++
 # TELEGRAM
