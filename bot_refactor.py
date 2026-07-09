@@ -1,4 +1,64 @@
 
+def analisar_e_disparar(game, stats, p, m, sh, sa, odd_h, odd_a, sent_vistos):
+    # IDENTIFICAÇÃO DO FAVORITO PRÉ-LIVE (OBRIGATÓRIO)
+    try:
+        oh = float(odd_h) if odd_h else 3.0
+        oa = float(odd_a) if odd_a else 3.0
+        fav_side = "h" if oh < oa else "a"
+    except:
+        fav_side = "h" # Fallback casa se der erro, mas odds sao prioridade
+
+    # DADOS DO FAVORITO
+    fav_gols = sh if fav_side == "h" else sa
+    adv_gols = sa if fav_side == "h" else sh
+    red_fav = stats.get(f"red_cards_{fav_side}", 0)
+    
+    # PRESSÃO (Favorito ou Ambas)
+    # Critério moderado de pressão: Chutes totais e Ataques Perigosos
+    appm_fav = stats.get(f"appm_{fav_side}", 0)
+    appm_adv = stats.get(f"appm_{'a' if fav_side == 'h' else 'h'}", 0)
+    pressao = (appm_fav >= 0.8) or (appm_fav + appm_adv >= 1.5)
+
+    # MERCADOS
+    
+    # 1. OVER GOL INTERVALO (HT)
+    if p == 1 and 15 <= m <= 27:
+        if sh == 0 and sa == 0 and red_fav == 0 and pressao:
+            return "HT", "Over 0.5 Gols HT"
+
+    # 2. OVER GOL PARTIDA (FT)
+    if p == 2 and 60 <= m <= 75:
+        # Favorito empatando ou perdendo por no máximo 1
+        if (fav_gols <= adv_gols) and (adv_gols - fav_gols <= 1) and red_fav == 0 and pressao:
+            total_gols = sh + sa
+            return "OVERGOAL", f"Mais de {total_gols + 0.5} Gols"
+
+    # 3. AMBAS MARCAM (BTTS)
+    if p == 2 and 60 <= m <= 75:
+        # Placar 1x0 ou 0x1 e Favorito perdendo por 1
+        if (sh + sa == 1) and (fav_gols == 0 and adv_gols == 1) and red_fav == 0 and pressao:
+            return "BTTS", "Ambas Marcam"
+
+    # 4. OVER 1.5 GOLS PARTIDA
+    if p == 2 and 60 <= m <= 75:
+        # Placar 1x0 ou 0x1 e Favorito perdendo por 1
+        if (sh + sa == 1) and (fav_gols == 0 and adv_gols == 1) and red_fav == 0 and pressao:
+            return "OFT", "Mais de 1.5 Gols Partida"
+
+    # 5. ESCANTEIO LIMITE HT
+    if p == 1 and 30 <= m <= 38:
+        # Favorito perdendo ou empatando por no máximo 1
+        if (fav_gols <= adv_gols) and (adv_gols - fav_gols <= 1) and red_fav == 0 and pressao:
+            return "CORNER_HT", "Escanteio Limite HT"
+
+    # 6. ESCANTEIO LIMITE FT
+    if p == 2 and 80 <= m <= 88:
+        # Favorito perdendo ou empatando por no máximo 1
+        if (fav_gols <= adv_gols) and (adv_gols - fav_gols <= 1) and red_fav == 0 and pressao:
+            return "CORNER_FT", "Escanteio Limite FT"
+
+    return None, None
+\n
 def gerar_layout_relatorio(greens, reds, data_str):
     sep = "━━━━━━━━━━━━━━━━━━━━"
     total = greens + reds
