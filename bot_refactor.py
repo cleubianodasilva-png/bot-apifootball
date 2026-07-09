@@ -6,7 +6,7 @@
 import os, json, requests, time
 
 print("🚀 [DEBUG] Iniciando execução do Robô Elite...")
-print(f"⏰ [DEBUG] Hora atual: {datetime.now()}")
+print(f"⏰ [DEBUG] Hora atual: {datetime.now(timezone.utc)}")
 
 from datetime import datetime, timezone, timedelta
 
