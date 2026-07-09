@@ -1103,7 +1103,7 @@ def msg_universal(home, away, minuto, liga, n, mercado, entrada, placar, extra_v
     titles = {
         "HT"       : "⚽️🔥<b>OVER GOL INTERVALO</b>🔥⚽️",
         "BTTS"     : "⚽️🔥<b>AMBAS MARCAM</b>🔥⚽️",
-        "OFT"      : "⚽️🔥<b>OVER 1.5 GOLS PARTIDA</b>🔥⚽️",
+        "OFT"      : "⚽️🔥<b>OVER GOL PARTIDA</b>🔥⚽️",
         "OVERGOAL" : "⚽️🔥<b>OVER GOL PARTIDA</b>🔥⚽️",
         "LIMITEHT" : "⚽️🔥<b>OVER GOL LIMITE HT</b>🔥⚽️",
         "CORNER_HT": "⛳️🔥<b>ESCANTEIO LIMITE HT</b>🔥⛳️",
@@ -1385,7 +1385,7 @@ def run():
                 key = f"{fid}_ft_{hoje}"
                 if key not in sent:
                     mid = send_telegram(msg_universal(h, a, m, liga, n_crit, "OFT", "", placar, stats=stats, sh=sh, sa=sa, fav_final=fav_final), marca=key, home=h, away=a)
-                    if mid: sent.add(key); total_env += 1; registrar_sinal(fid, "OFT", h, a, mid)
+                    if mid: sent.add(key); total_env += 1; registrar_sinal(fid, "OVERGOAL", h, a, mid)
 
         if p == 2 and 80 <= m <= 88 and (fav_empatando or fav_perdendo_1) and red_fav == 0:
             key = f"{fid}_cft_{hoje}"
