@@ -1,4 +1,4 @@
-name: Maquina Oficial 24h
+name: Zapia Oficial 24h
 on:
   schedule:
     - cron: '*/5 * * * *'
