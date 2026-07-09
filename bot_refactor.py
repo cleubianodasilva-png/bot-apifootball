@@ -2000,6 +2000,11 @@ def run():
                 fav_final = "h"
                 print(f"[FAV-HOME] {h} x {a} — sem odds e sem stats, assumindo mandante como favorito")
 
+        # Sem stats reais = pula o jogo
+        if not tem_stats:
+            print(f"[SKIP] {h} x {a} — sem estatisticas reais, pulando")
+            continue
+
         red_fav = stats.get(f"red_cards_{fav_final}", 0) if stats else 0
 
         # Placar do favorito e adversário
