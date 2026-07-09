@@ -1290,27 +1290,35 @@ def check_status_command(total_jogos_live=0, jogos_live=None, jogos_na_janela=No
 
 
 
+
 def run():
-    print("[Iniciando monitoramento — TRIPLA VARREDURA (APIFOOTBALL + BZZOIRO + ESPN)]")
+    print("[RUN] Iniciando Tripla Varredura Profunda...")
     sent = load_sent()
     total_env = 0
     
-    # 1. BUSCA DE JOGOS (Simultânea)
-    jogos_apif = get_jogos_apifootball_v3([]) 
+    # 1. BUSCA DE JOGOS
+    try:
+        jogos_apif = get_jogos_apifootball_v3([])
+    except:
+        jogos_apif = []
+    
     fids_existentes = {j["fid"] for j in jogos_apif}
-    jogos_espn = get_jogos_espn_global()
-    jogos_bzz = get_jogos_bzzoiro(fids_existentes)
+    
+    try:
+        jogos_espn = get_jogos_espn_global()
+    except:
+        jogos_espn = []
+        
+    try:
+        jogos_bzz = get_jogos_bzzoiro(fids_existentes)
+    except:
+        jogos_bzz = []
     
     jogos_live = jogos_apif + [j for j in jogos_espn if j["fid"] not in fids_existentes] + jogos_bzz
-    print(f"[SCAN] Total: {len(jogos_live)} jogos ao vivo")
-
-    print(f"[RAW-DEBUG] Primeiros 5 jogos encontrados:")
-    for j in jogos_live[:5]:
-        print(f"  - {j.get('home')} x {j.get('away')} | Min: {j.get('minuto')} | P: {j.get('period')}")
-
+    print(f"[SCAN] {len(jogos_live)} jogos encontrados no total.")
 
     jogos_na_janela = filtrar_janelas(jogos_live)
-    check_status_command(total_jogos_live=len(jogos_live), jogos_live=jogos_live, jogos_na_janela=jogos_na_janela)
+    print(f"[SCAN] {len(jogos_na_janela)} jogos dentro das minutagens sagradas.")
 
     for j in jogos_na_janela:
         fid, h, a = j["fid"], j["home"], j["away"]
@@ -1320,93 +1328,86 @@ def run():
         liga = str(j.get("liga", ""))
         source = j.get("source", "espn")
 
-        
-        # --- DEBUG DETALHADO ---
-        print(f"[DEBUG] {h}x{a} | Min: {m} | Placar: {placar} | Janela: {'Sim' if (15<=m<=27 or 30<=m<=38 or 60<=m<=75 or 80<=m<=88) else 'Não'}")
-        
-        # BUSCA DE ESTATÍSTICAS PROFUNDAS
-
-        
-        print(f"--- Analisando {h} x {a} ---")
-        stats = get_stats_apifootball_v3(j.get("fid_raw", fid))
-        print(f"  Stats: {'OK' if stats else 'Vazio'}")
-        fav_final = get_odd_favorito_num(h, a, fid=fid, league=j.get("liga_slug", liga))
-        print(f"  Fav: {fav_final}")
-
+        # BUSCA DE ESTATÍSTICAS (Prioridade Mestre)
+        stats = {}
+        try:
+            stats = get_stats_apifootball_v3(j.get("fid_raw", fid))
+        except:
+            pass
+            
         if not stats:
-            if source == "bzzoiro": stats = get_stats_bzzoiro(j["fid_raw"], h, a)
-            else: stats = get_stats_espn(fid, h, a)
-        
-        if not stats:
-            print(f"[SKIP] {h}x{a} - sem stats")
+            # Fallback seguro para evitar NameError
+            stats = {}
+
+        # FAVORITO
+        fav_final = None
+        try:
+            fav_final = get_odd_favorito_num(h, a, fid=fid, league=j.get("liga_slug", liga))
+        except:
+            pass
+            
+        if not fav_final or fav_final == 99:
+            print(f"  [SKIP] {h} x {a} - Favorito não identificado.")
             continue
 
-        # FAVORITO E PRESSÃO
-        fav_final = get_odd_favorito_num(h, a, fid=fid, league=j.get("liga_slug", liga))
+        # PRESSÃO
         chutes_gol_fav = stats.get("chutes_gol_h", 0) if fav_final == "h" else stats.get("chutes_gol_a", 0)
         chutes_tot_fav = stats.get("chutes_tot_h", 0) if fav_final == "h" else stats.get("chutes_tot_a", 0)
-        
         fav_amassando = (chutes_gol_fav >= 1 or chutes_tot_fav >= 3)
         ambas_pressionando = (stats.get("chutes_tot_h", 0) >= 2 and stats.get("chutes_tot_a", 0) >= 2)
-        
-        if not (fav_amassando or ambas_pressionando):
-            print(f"  [X] Sem Pressão: Gol Fav: {chutes_gol_fav} | Tot Fav: {chutes_tot_fav} | Ambas: {ambas_pressionando}")
-        else:
-            print(f"  [V] Pressão OK: Gol Fav: {chutes_gol_fav} | Tot Fav: {chutes_tot_fav}")
-
         
         fav_empatando = (sh == sa)
         fav_perdendo_1 = (fav_final == "h" and sa == sh + 1) or (fav_final == "a" and sh == sa + 1)
         red_fav = stats.get("red_cards_h", 0) if fav_final == "h" else stats.get("red_cards_a", 0)
 
-        # N_CRIT (Cálculo único)
+        # CRITÉRIOS (Mínimo 4)
         n_crit = 0
         if fav_final: n_crit += 1
-        if (p == 1 and m >= 15) or (p == 2 and m >= 60): n_crit += 1
+        if (p == 1 and 15 <= m <= 27) or (p == 1 and 30 <= m <= 38) or (p == 2 and 60 <= m <= 75) or (p == 2 and 80 <= m <= 88): n_crit += 1
         if (fav_empatando or fav_perdendo_1): n_crit += 1
         if red_fav == 0: n_crit += 1
         if fav_amassando: n_crit += 1
         if ambas_pressionando: n_crit += 1
         n_crit = max(4, min(6, n_crit))
 
-        # MERCADOS (Respeitando a minutagem sagrada)
         hoje = datetime.now(BRT).strftime('%Y%m%d')
-        odds_pre = None # Pode ser expandido se necessário
-
-        # 1. OVER 0.5 HT (15-27 min)
+        
+        # LÓGICA DE ENVIO (Layout Sagrado)
+        # 1. OVER 0.5 HT
         if p == 1 and 15 <= m <= 27 and sh == 0 and sa == 0 and red_fav == 0:
             if fav_amassando or ambas_pressionando:
                 key = f"{fid}_ht_{hoje}"
                 if key not in sent:
-                    mid = send_telegram(msg_universal(h, a, m, liga, n_crit, "HT", "Over 0.5 HT", placar, stats=stats, sh=sh, sa=sa, fav_final=fav_final, odds_pre=odds_pre), marca=key, home=h, away=a)
+                    mid = send_telegram(msg_universal(h, a, m, liga, n_crit, "HT", "Over 0.5 HT", placar, stats=stats, sh=sh, sa=sa, fav_final=fav_final), marca=key, home=h, away=a)
                     if mid: sent.add(key); total_env += 1; registrar_sinal(fid, "HT", h, a, mid)
 
-        # 2. ESCANTEIO HT (30-38 min)
+        # 2. ESCANTEIO HT
         if p == 1 and 30 <= m <= 38 and (fav_empatando or fav_perdendo_1) and red_fav == 0:
             key = f"{fid}_cht_{hoje}"
             cantos = stats.get("escanteios_h", 0) + stats.get("escanteios_a", 0)
             if key not in sent:
-                mid = send_telegram(msg_universal(h, a, m, liga, n_crit, "CORNER_HT", "", placar, cantos_atual=cantos, stats=stats, sh=sh, sa=sa, fav_final=fav_final, odds_pre=odds_pre), marca=key, home=h, away=a)
+                mid = send_telegram(msg_universal(h, a, m, liga, n_crit, "CORNER_HT", "", placar, cantos_atual=cantos, stats=stats, sh=sh, sa=sa, fav_final=fav_final), marca=key, home=h, away=a)
                 if mid: sent.add(key); total_env += 1; registrar_sinal(fid, "CORNER_HT", h, a, mid, extra_val=cantos)
 
-        # 3. OVER 1.5 FT / BTTS / GOAL (60-75 min)
+        # 3. OVER FT
         if p == 2 and 60 <= m <= 75 and (fav_empatando or fav_perdendo_1) and red_fav == 0:
             if fav_amassando or ambas_pressionando:
                 key = f"{fid}_ft_{hoje}"
                 if key not in sent:
-                    mid = send_telegram(msg_universal(h, a, m, liga, n_crit, "OFT", "", placar, stats=stats, sh=sh, sa=sa, fav_final=fav_final, odds_pre=odds_pre), marca=key, home=h, away=a)
+                    mid = send_telegram(msg_universal(h, a, m, liga, n_crit, "OFT", "", placar, stats=stats, sh=sh, sa=sa, fav_final=fav_final), marca=key, home=h, away=a)
                     if mid: sent.add(key); total_env += 1; registrar_sinal(fid, "OFT", h, a, mid)
 
-        # 4. ESCANTEIO FT (80-88 min)
+        # 4. ESCANTEIO FT
         if p == 2 and 80 <= m <= 88 and (fav_empatando or fav_perdendo_1) and red_fav == 0:
             key = f"{fid}_cft_{hoje}"
             cantos = stats.get("escanteios_h", 0) + stats.get("escanteios_a", 0)
             if key not in sent:
-                mid = send_telegram(msg_universal(h, a, m, liga, n_crit, "CORNER_FT", "", placar, cantos_atual=cantos, stats=stats, sh=sh, sa=sa, fav_final=fav_final, odds_pre=odds_pre), marca=key, home=h, away=a)
+                mid = send_telegram(msg_universal(h, a, m, liga, n_crit, "CORNER_FT", "", placar, cantos_atual=cantos, stats=stats, sh=sh, sa=sa, fav_final=fav_final), marca=key, home=h, away=a)
                 if mid: sent.add(key); total_env += 1; registrar_sinal(fid, "CORNER_FT", h, a, mid, extra_val=cantos)
 
     save_sent(sent)
-    print(f"Finalizado. Enviados: {total_env}")
+    print(f"[DONE] Ciclo finalizado. Sinais enviados: {total_env}")
+
 
 if __name__ == "__main__":
     run()
