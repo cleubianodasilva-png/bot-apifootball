@@ -1,4 +1,28 @@
-import requests\n
+
+def gerar_layout_radar(jogos_ao_vivo, jogos_na_janela):
+    sep = "━━━━━━━━━━━━━━━━━━━━"
+    texto_janela = "Nenhum jogo na janela no momento."
+    if jogos_na_janela:
+        texto_janela = ""
+        for j in jogos_na_janela:
+            texto_janela += f"⚽️ {j['times']} ({j['minuto']})\n"
+
+    corpo = (
+        f"{sep}\n"
+        f"📡 RADAR AO VIVO 📡\n"
+        f"{sep}\n"
+        f"🔴 {len(jogos_ao_vivo)} jogos ao vivo\n"
+        f"🎯 {len(jogos_na_janela)} na janela alvo\n"
+        f"{sep}\n"
+        f"🎯 NA JANELA:\n"
+        f"{texto_janela}\n"
+        f"{sep}\n"
+        f"⏳ FORA DA JANELA:\n"
+        f"—\n"
+        f"{sep}"
+    )
+    return corpo
+\nimport requests\n
 def processar_comandos_pendentes(token, chat_id):
     import time
     url = f"https://api.telegram.org/bot{token}/getUpdates"
