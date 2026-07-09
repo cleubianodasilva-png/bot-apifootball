@@ -1223,7 +1223,7 @@ def get_favorito_odds(home, away, fid=None, league=None):
             match_id = str(fid).replace("apfc_","")
             r = requests.get("https://apiv3.apifootball.com/",
                              params={"action": "get_odds", "match_id": match_id,
-                                     "APIkey": "312c2ecc90136b390d19c765711088d8121b195418b9c2e8006b9e8f7ed8e4ed", timeout=8)
+                                     "APIkey": APIFOOTBALL_COM_KEY}, timeout=8)
             odds_data = r.json()
             if isinstance(odds_data, list) and odds_data:
                 odd = odds_data[0]
@@ -1715,58 +1715,19 @@ def run():
         else:
             source = j.get("source", "espn")
         if source == "apifootball":
-            # --- FALLBACK INTELIGENTE (Autorizado) ---
-            try:
-                stats = get_stats_apifootball_v3(j.get('fid_raw', fid))
-            except: stats = {}
-
-            # Se a API mestre vier zerada, usa os dados da varredura (ESPN/Bzzoiro)
-            if not stats or (stats.get('chutes_tot_h', 0) + stats.get('chutes_tot_a', 0) == 0):
-                stats = {
-                    'chutes_tot_h': j.get('sh', 0), 'chutes_tot_a': j.get('sa', 0),
-                    'chutes_gol_h': j.get('sgh', 0), 'chutes_gol_a': j.get('sga', 0),
-                    'escanteios_h': j.get('ch', 0), 'escanteios_a': j.get('ca', 0),
-                    'posse_h': j.get('ph', 50), 'posse_a': j.get('pa', 50),
-                    'red_cards_h': j.get('rh', 0), 'red_cards_a': j.get('ra', 0)
-                }
+            stats = get_stats_apifootball_v3(j["fid_raw"])
         elif source == "bzzoiro":
             stats = get_stats_bzzoiro(j["fid_raw"], h, a)
         else:
             source = j.get("source", "espn")
         if source == "apifootball":
-            # --- FALLBACK INTELIGENTE (Autorizado) ---
-            try:
-                stats = get_stats_apifootball_v3(j.get('fid_raw', fid))
-            except: stats = {}
-
-            # Se a API mestre vier zerada, usa os dados da varredura (ESPN/Bzzoiro)
-            if not stats or (stats.get('chutes_tot_h', 0) + stats.get('chutes_tot_a', 0) == 0):
-                stats = {
-                    'chutes_tot_h': j.get('sh', 0), 'chutes_tot_a': j.get('sa', 0),
-                    'chutes_gol_h': j.get('sgh', 0), 'chutes_gol_a': j.get('sga', 0),
-                    'escanteios_h': j.get('ch', 0), 'escanteios_a': j.get('ca', 0),
-                    'posse_h': j.get('ph', 50), 'posse_a': j.get('pa', 50),
-                    'red_cards_h': j.get('rh', 0), 'red_cards_a': j.get('ra', 0)
-                }
+            stats = get_stats_apifootball_v3(j["fid_raw"])
         elif source == "bzzoiro":
             stats = get_stats_bzzoiro(j["fid_raw"], h, a)
         else:
             source = j.get("source", "espn")
         if source == "apifootball":
-            # --- FALLBACK INTELIGENTE (Autorizado) ---
-            try:
-                stats = get_stats_apifootball_v3(j.get('fid_raw', fid))
-            except: stats = {}
-
-            # Se a API mestre vier zerada, usa os dados da varredura (ESPN/Bzzoiro)
-            if not stats or (stats.get('chutes_tot_h', 0) + stats.get('chutes_tot_a', 0) == 0):
-                stats = {
-                    'chutes_tot_h': j.get('sh', 0), 'chutes_tot_a': j.get('sa', 0),
-                    'chutes_gol_h': j.get('sgh', 0), 'chutes_gol_a': j.get('sga', 0),
-                    'escanteios_h': j.get('ch', 0), 'escanteios_a': j.get('ca', 0),
-                    'posse_h': j.get('ph', 50), 'posse_a': j.get('pa', 50),
-                    'red_cards_h': j.get('rh', 0), 'red_cards_a': j.get('ra', 0)
-                }
+            stats = get_stats_apifootball_v3(j["fid_raw"])
         elif source == "bzzoiro":
             stats = get_stats_bzzoiro(j["fid_raw"], h, a)
         else:
@@ -1786,7 +1747,7 @@ def run():
 
         try:
             r_odd = requests.get("https://apiv3.apifootball.com/",
-                             params={"action": "get_odds", "match_id": fid, "APIkey": "312c2ecc90136b390d19c765711088d8121b195418b9c2e8006b9e8f7ed8e4ed", timeout=8)
+                             params={"action": "get_odds", "match_id": fid, "APIkey": APIFOOTBALL_COM_KEY}, timeout=8)
             odds_data = r_odd.json()
             if isinstance(odds_data, list) and odds_data:
                 odd = odds_data[0]
@@ -1799,7 +1760,7 @@ def run():
     if not fav_por_odds:
         try:
             r = requests.get("https://apiv3.apifootball.com/",
-                             params={"action": "get_odds", "match_id": fid, "APIkey": "312c2ecc90136b390d19c765711088d8121b195418b9c2e8006b9e8f7ed8e4ed", timeout=8)
+                             params={"action": "get_odds", "match_id": fid, "APIkey": APIFOOTBALL_COM_KEY}, timeout=8)
             odds_data = r.json()
             if isinstance(odds_data, list) and odds_data:
                 odd = odds_data[0]
@@ -1812,7 +1773,7 @@ def run():
     if not fav_por_odds:
         try:
             r = requests.get("https://apiv3.apifootball.com/",
-                             params={"action": "get_odds", "match_id": fid, "APIkey": "312c2ecc90136b390d19c765711088d8121b195418b9c2e8006b9e8f7ed8e4ed", timeout=8)
+                             params={"action": "get_odds", "match_id": fid, "APIkey": APIFOOTBALL_COM_KEY}, timeout=8)
             odds_data = r.json()
             if isinstance(odds_data, list) and odds_data:
                 odd = odds_data[0]
