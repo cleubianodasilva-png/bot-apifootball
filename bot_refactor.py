@@ -1590,7 +1590,8 @@ def msg_universal(home, away, minuto, liga, n, mercado, entrada, placar, extra_v
     cant_a = stats.get("escanteios_a", 0) if stats else 0
     sep = "\u2501" * 20
     return (
-        "<b>" + title + "</b>\n"
+        sep + "\n"
+        + "<b>" + title + "</b>\n"
         + sep + "\n"
         + "\u26bd\ufe0f Placar: <b>" + str(placar) + "</b>\n"
         + "\U0001f30d Liga: <b>" + liga + "</b>\n"
