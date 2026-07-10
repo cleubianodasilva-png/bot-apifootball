@@ -1119,9 +1119,12 @@ def get_jogos_apifootball_v3(fids_existentes):
         if not isinstance(data, list): return []
         jogos = []
         for ev in data:
+            # Pula jogos já finalizados (API retorna Finished como match_live=1)
+            status_raw = str(ev.get("match_status", "0") or "0").replace("'","").strip()
+            if status_raw.lower() == "finished":
+                continue
             fid = "apif_" + str(ev.get("match_id", ""))
             if fid in fids_existentes: continue
-            status_raw = str(ev.get("match_status", "0") or "0").replace("'","").strip()
             status_digits = __import__('re').findall(r'\d+', status_raw)
             minuto = int(status_digits[0]) if status_digits else 0
             liga_nome = ev.get("league_name", "") or ev.get("league", "") or ev.get("competition_name", "") or "Liga"
