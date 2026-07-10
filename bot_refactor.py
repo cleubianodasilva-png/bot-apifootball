@@ -1500,7 +1500,7 @@ def get_favorito_odds(home, away, fid=None, league=None):
                         if odd_h < 90 and odd_a < 90:
                             fav = "h" if odd_h <= odd_a else "a"
                             print(f"[ODDS-ESPN] {home} x {away} | Casa:{odd_h} Fora:{odd_a} → Fav:{fav}")
-                            return fav
+                            return (fav, odd_h, odd_a)
         except Exception as e:
             print(f"[ODDS-ESPN] Erro: {e}")
 
@@ -1520,7 +1520,7 @@ def get_favorito_odds(home, away, fid=None, league=None):
                     if odd_h > 1 and odd_a > 1:
                         fav = "h" if odd_h <= odd_a else "a"
                         print(f"[ODDS-APFC] {home} x {away} | Casa:{odd_h} Fora:{odd_a} → Fav:{fav}")
-                        return fav
+                        return (fav, odd_h, odd_a)
                 except:
                     pass
         except Exception as e:
@@ -1543,10 +1543,10 @@ def get_favorito_odds(home, away, fid=None, league=None):
                                 odd_a = outcomes.get(away.lower(), 99)
                                 fav = "h" if odd_h <= odd_a else "a"
                                 print(f"[ODDS-API] {home} x {away} | Casa:{odd_h} Fora:{odd_a} → Fav:{fav}")
-                                return fav
+                                return (fav, odd_h, odd_a)
     except:
         pass
-    return None
+    return (None, None, None)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # FILTRO DE JANELAS
@@ -2250,9 +2250,8 @@ def run():
             continue
 
         # Determinar favorito pelas odds (ESPN primeiro, depois Odds API)
-        fav_final = get_favorito_odds(h, a, fid=fid, league=j.get("liga_slug", j.get("liga", "")))
+        fav_final, odd_h, odd_a = get_favorito_odds(h, a, fid=fid, league=j.get("liga_slug", j.get("liga", "")))
         fav_por_odds = fav_final in ("h", "a")
-        odd_h, odd_a = None, None
 
         try:
             r_odd = requests.get("https://apiv3.apifootball.com/",
