@@ -1189,6 +1189,44 @@ def get_stats_bzzoiro(fid_raw, home, away):
         return stats
     except: return {}
 
+def get_stats_apifootball_by_name(home, away):
+    """Fallback: busca jogo na apifootball pelo nome dos times e retorna stats."""
+    import unicodedata
+    def norm(s):
+        return unicodedata.normalize('NFKD', s).encode('ascii', 'ignore').decode().lower().strip()
+    try:
+        r = requests.get(APIFOOTBALL_URL, params={"action": "get_events", "match_live": "1", "APIkey": APIFOOTBALL_COM_KEY}, timeout=15)
+        data = r.json()
+        if not isinstance(data, list): return {}
+        h_busca = norm(home)
+        a_busca = norm(away)
+        # Procura jogo onde os nomes dos times batem (parcialmente)
+        for ev in data:
+            h_nome = norm(ev.get("match_hometeam_name", ""))
+            a_nome = norm(ev.get("match_awayteam_name", ""))
+            if (h_busca in h_nome or h_nome in h_busca) and (a_busca in a_nome or a_nome in a_busca):
+                mid = str(ev.get("match_id", ""))
+                if mid:
+                    print(f"[APIF-NAME] Match por nome: {ev['match_hometeam_name']} x {ev['match_awayteam_name']} → ID {mid}")
+                    return get_stats_apifootball_v3(mid)
+        # Tenta também ao contrário (home/away invertido)
+        for ev in data:
+            h_nome = norm(ev.get("match_hometeam_name", ""))
+            a_nome = norm(ev.get("match_awayteam_name", ""))
+            if (h_busca in a_nome or a_nome in h_busca) and (a_busca in h_nome or h_nome in a_busca):
+                mid = str(ev.get("match_id", ""))
+                if mid:
+                    print(f"[APIF-NAME] Match invertido: {ev['match_hometeam_name']} x {ev['match_awayteam_name']} → ID {mid}")
+                    stats = get_stats_apifootball_v3(mid)
+                    if stats:
+                        # Inverter os lados quando o match for invertido
+                        for campo in ["escanteios_h","escanteios_a","chutes_tot_h","chutes_tot_a","chutes_gol_h","chutes_gol_a","red_cards_h","red_cards_a","posse_h","posse_a"]:
+                            campo_inv = campo.replace("_h","_x").replace("_a","_h").replace("_x","_a")
+                            if campo in stats: stats[campo_inv] = stats.pop(campo)
+                    return stats
+        return {}
+    except: return {}
+
 def get_stats_espn(eid, home, away):
     """Busca estatísticas de um jogo via ESPN summary. Sem custo."""
     try:
@@ -1576,11 +1614,9 @@ def gerar_motivo(mercado, stats, sh, sa, fav_final, cantos_atual=0):
 
 def msg_universal(home, away, minuto, liga, n, mercado, entrada, placar, extra_val=None, cantos_atual=0, stats=None, sh=0, sa=0, fav_final="h"):
     if "CORNER" in mercado or "ESCANTEIO" in mercado:
+        linha = cantos_atual + 0.5
         if cantos_atual > 0:
-            linha = cantos_atual + 0.5
             entrada = f"Mais de {linha}⛳️"
-        else:
-            entrada = "S/L⛳️"
     
     titles = {
         "HT": "⛳️🔥OVER GOL INTERVALO🔥⛳️",
@@ -1629,10 +1665,7 @@ def msg_universal(home, away, minuto, liga, n, mercado, entrada, placar, extra_v
         pressao = "Baixa 💮"
 
     if "ESCANTEIO" in mercado or "CORNER" in mercado:
-        if total_cantos > 0:
-            alerta = f"Já saiu {total_cantos} escanteios até o {minuto}⛳️"
-        else:
-            alerta = "Escanteios: S/L (dados indisponíveis)"
+        alerta = f"Já saiu {total_cantos} escanteios até o {minuto}⛳️"
     elif total_alvo >= 4 and minuto >= 50:
         alerta = f"Total de {total_alvo} finalizações no alvo - ofensividade alta"
     elif total_chutes >= 8:
@@ -1930,6 +1963,14 @@ def run():
                 sa3 = get_stats_apifootball_v3(fid_raw)
                 if isinstance(sa3, dict): stats_apif = sa3
             except: pass
+        # Fallback: busca por nome dos times se o ID falhar
+        if not stats_apif or not (stats_apif.get("escanteios_h", -1) >= 0 and stats_apif.get("escanteios_a", -1) >= 0):
+            try:
+                sa_name = get_stats_apifootball_by_name(h, a)
+                if isinstance(sa_name, dict) and sa_name.get("escanteios_h", -1) >= 0:
+                    stats_apif = sa_name
+                    print(f"[APIF-NAME] Stats por nome OK: esc {sa_name.get('escanteios_h')}x{sa_name.get('escanteios_a')}")
+            except: pass
 
         stats = {}
         for src_nome, src in [("ESPN", stats_espn), ("Bzzoiro", stats_bzz), ("apifootball", stats_apif)]:
@@ -2101,13 +2142,10 @@ def run():
             key = f"{fid}_cht_{hoje}"
             cantos_h = stats.get("escanteios_h", -1) if stats else -1
             cantos_a = stats.get("escanteios_a", -1) if stats else -1
-            if cantos_h >= 0 and cantos_a >= 0:
-                cantos = max(0, cantos_h) + max(0, cantos_a)
-                cantos_label = str(cantos)
-            else:
-                cantos = -1
-                cantos_label = "N/A"
-            if key not in sent:
+            cantos = (max(0, cantos_h) + max(0, cantos_a)) if (cantos_h >= 0 and cantos_a >= 0) else -1
+            if cantos < 0:
+                print(f"[SKIP-CORNER-HT] {h} x {a} — cantos={cantos} sem chutes")
+            elif key not in sent:
                 mid = send_telegram(msg_universal(h, a, m, liga, 5, "CORNER_HT", "", placar, cantos_atual=cantos, stats=stats, sh=sh, sa=sa, fav_final=fav_final), marca=key, home=h, away=a)
                 if mid:
                     sent.add(key); total_env += 1
