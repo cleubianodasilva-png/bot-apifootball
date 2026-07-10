@@ -2046,75 +2046,16 @@ def run():
 
         print(f"[Analisando] {h} x {a} | {placar} | {m}min")
 
-        # Stats FUSION: apifootball (principal) → ESPN → Bzzoiro (reservas)
+        # Sem stats — removido para performance. Stats será ignorado.
         fid_raw = j.get("fid_raw", fid)
-        stats_apif = {}
-        try:
-            sa_api = get_stats_apifootball_live(fid)
-            if isinstance(sa_api, dict): stats_apif = sa_api
-        except: pass
-        if not stats_apif:
-            try:
-                sa3 = get_stats_apifootball_v3(fid_raw)
-                if isinstance(sa3, dict): stats_apif = sa3
-            except: pass
-        # Fallback: busca por nome dos times se o ID falhar (apifootball cobre 700+ ligas)
-        if not stats_apif or not (stats_apif.get("escanteios_h", -1) >= 0 and stats_apif.get("escanteios_a", -1) >= 0):
-            try:
-                sa_name = get_stats_apifootball_by_name(h, a)
-                if isinstance(sa_name, dict) and sa_name.get("escanteios_h", -1) >= 0:
-                    stats_apif = sa_name
-                    print(f"[APIF-NAME] Stats por nome OK: esc {sa_name.get('escanteios_h')}x{sa_name.get('escanteios_a')}")
-            except: pass
-        stats_espn = {}
-        try:
-            se = get_stats_espn(fid, h, a)
-            if isinstance(se, dict): stats_espn = se
-        except: pass
-        stats_bzz = {}
-        try:
-            sb = get_stats_bzzoiro(fid_raw, h, a)
-            if isinstance(sb, dict): stats_bzz = sb
-        except: pass
-
         stats = {}
-        for src_nome, src in [("apifootball", stats_apif), ("ESPN", stats_espn), ("Bzzoiro", stats_bzz)]:
-            for campo in ["chutes_tot_h","chutes_tot_a","chutes_gol_h","chutes_gol_a","escanteios_h","escanteios_a","red_cards_h","red_cards_a","posse_h","posse_a","ataques_h","ataques_a","ataques_perigosos_h","ataques_perigosos_a"]:
-                if campo not in src:
-                    continue
-                val = src[campo]
-                if not isinstance(val, (int,float)) or val < 0:
-                    continue
-                current = stats.get(campo, -1)
-                if current == -1:
-                    stats[campo] = val
-                    stats["_fonte_"+campo] = src_nome
-                elif current == 0 and val > 0:
-                    stats[campo] = val
-                    stats["_fonte_"+campo] = src_nome
-        for k in ["chutes_tot_h","chutes_tot_a","chutes_gol_h","chutes_gol_a"]:
-            stats.setdefault(k, 0)
-        for k in ["escanteios_h","escanteios_a"]:
-            stats.setdefault(k, -1)
-        for k in ["red_cards_h","red_cards_a"]:
-            stats.setdefault(k, 0)
-        print(f"[STATS-FUSION] {h} x {a} | chutes: {stats.get('chutes_tot_h',0)}/{stats.get('chutes_tot_a',0)} | cantos: {stats.get('escanteios_h',-1)}/{stats.get('escanteios_a',-1)}")
 
-        # Verifica se tem dados reais — sem stats E sem odds, pula o jogo
-        tem_stats = stats and (
-            stats.get("chutes_tot_h", 0) > 0 or
-            stats.get("chutes_tot_a", 0) > 0 or
-            stats.get("escanteios_h", -1) >= 0 or
-            stats.get("escanteios_a", -1) >= 0
-        )
-
-        # Determinar favorito pelas odds (ESPN primeiro, depois Odds API)
-        fav_final = get_favorito_odds(h, a, fid=fid, league=j.get("liga_slug", j.get("liga", "")))
-        fav_por_odds = fav_final in ("h", "a")
-
+        # Determinar favorito pelas odds da apifootball
+        fav_final = "h"
+        fav_por_odds = False
         try:
             r_odd = requests.get("https://apiv3.apifootball.com/",
-                             params={"action": "get_odds", "match_id": fid, "APIkey": APIFOOTBALL_COM_KEY}, timeout=8)
+                             params={"action": "get_odds", "match_id": fid, "APIkey": APIFOOTBALL_COM_KEY}, timeout=6)
             odds_data = r_odd.json()
             if isinstance(odds_data, list) and odds_data:
                 odd = odds_data[0]
@@ -2127,7 +2068,7 @@ def run():
         # Fallback odds via Bzzoiro
         if not fav_por_odds:
             try:
-                r = requests.get(f"https://sports.bzzoiro.com/api/matches/{fid_raw}/", timeout=8)
+                r = requests.get(f"https://sports.bzzoiro.com/api/matches/{fid_raw}/", timeout=6)
                 bz = r.json()
                 odd_h = float(bz.get("odd_h", 0) or bz.get("home_odd", 0) or 0)
                 odd_a = float(bz.get("odd_a", 0) or bz.get("away_odd", 0) or 0)
@@ -2136,19 +2077,10 @@ def run():
                     fav_por_odds = True
             except: pass
 
-        # Sem odds = usa stats (chutes) como fallback para definir favorito
         if not fav_por_odds:
-            if stats and stats.get("fav_side") in ("h", "a"):
-                fav_final = stats["fav_side"]
-                print(f"[FAV-STATS] {h} x {a} — sem odds, favorito pelo chutes: {fav_final}")
-            elif stats and (stats.get("chutes_tot_h", 0) > 0 or stats.get("chutes_tot_a", 0) > 0):
-                fav_final = "h" if stats.get("chutes_tot_h", 0) >= stats.get("chutes_tot_a", 0) else "a"
-                print(f"[FAV-STATS] {h} x {a} — sem odds, favorito pelo chutes: {fav_final}")
-            else:
-                fav_final = "h"
-                print(f"[FAV-HOME] {h} x {a} — sem odds e sem stats, assumindo mandante como favorito")
+            print(f"[FAV-HOME] {h} x {a} — sem odds, assumindo mandante como favorito")
 
-        red_fav = stats.get(f"red_cards_{fav_final}", 0) if stats else 0
+        red_fav = 0
 
         # Placar do favorito e adversário
         fav_gols = sh if fav_final == "h" else sa
