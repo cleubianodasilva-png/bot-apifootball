@@ -131,7 +131,7 @@ TG_TOKEN = TELEGRAM_TOKEN
 CHAT_IDS = [os.environ.get("TG_GROUP_ID", "")]
 CHAT_ID = CHAT_IDS[0] if CHAT_IDS else ""  # BOOT IA INTELIGENTE (Zapia)
 
-# apifootball (fallback quando ESPN não tiver o jogo)
+# apifootball — API PRINCIPAL para dados de jogos
 API_FOOTBALL_KEYS = [
     os.getenv("APIFOOTBALL_KEY"),   # Chave Mestre protegida
 ]
@@ -754,10 +754,11 @@ def _fetch_liga(liga_slug):
     return resultado
 
 
-def get_jogos_espn():
+def get_jogos_espn(fids_existentes=None):
     from concurrent.futures import ThreadPoolExecutor, as_completed
+    if fids_existentes is None: fids_existentes = set()
     jogos  = []
-    vistos = set()
+    vistos = set(fids_existentes)
     with ThreadPoolExecutor(max_workers=20) as executor:
         futures = {executor.submit(_fetch_liga, slug): slug for slug in ESPN_LIGAS}
         for future in as_completed(futures):
@@ -765,7 +766,7 @@ def get_jogos_espn():
                 if j["fid"] not in vistos:
                     vistos.add(j["fid"])
                     jogos.append(j)
-    print(f"[ESPN] {len(jogos)} jogos ao vivo ({len(ESPN_LIGAS)} ligas monitoradas)")
+    print(f"[ESPN] {len(jogos)} jogos novos (excluindo {len(fids_existentes)} já cobertos)")
     return jogos
 
 
@@ -1992,19 +1993,25 @@ def run():
     # janela_id por hora — evita duplicata mesmo se Actions rodar 2x no mesmo minuto
     janela_id = datetime.now(BRT).strftime('%Y%m%d%H')
 
-    # PASSO 1A: ESPN busca todos os jogos ao vivo
-    jogos_espn = get_jogos_espn()
-    fids_espn  = {j["fid"] for j in jogos_espn}
+    # ─────────────────────────────────────────────────────────────
+    # PASSO 1A: apifootball — fonte PRINCIPAL de jogos ao vivo
+    # ─────────────────────────────────────────────────────────────
+    jogos_apif = get_jogos_apifootball_v3(set())
+    fids_apif  = {j["fid"] for j in jogos_apif}
 
-    # PASSO 1B: apifootball preenche o que ESPN não cobre
-    jogos_apif = get_jogos_apifootball_v3(fids_espn)
+    # ─────────────────────────────────────────────────────────────
+    # PASSO 1B: ESPN — complementa o que apifootball não cobre
+    # ─────────────────────────────────────────────────────────────
+    jogos_espn = get_jogos_espn(fids_apif)
 
-    # PASSO 1C: Bzzoiro preenche o que os outros não cobrem
-    jogos_bzz = get_jogos_bzzoiro(fids_espn | {j["fid"] for j in jogos_apif})
+    # ─────────────────────────────────────────────────────────────
+    # PASSO 1C: Bzzoiro — preenche o que os outros não cobrem
+    # ─────────────────────────────────────────────────────────────
+    jogos_bzz = get_jogos_bzzoiro(fids_apif | {j["fid"] for j in jogos_espn})
 
-    # Junta tudo — ESPN tem prioridade (stats mais ricas via summary)
-    jogos_live = jogos_espn + jogos_apif + jogos_bzz
-    print(f"[Total] {len(jogos_live)} jogos ao vivo (ESPN={len(jogos_espn)} + apifootball={len(jogos_apif)} + bzzoiro={len(jogos_bzz)})")
+    # Junta tudo — apifootball tem prioridade (fonte principal)
+    jogos_live = jogos_apif + jogos_espn + jogos_bzz
+    print(f"[Total] {len(jogos_live)} jogos ao vivo (apifootball={len(jogos_apif)} + ESPN={len(jogos_espn)} + bzzoiro={len(jogos_bzz)})")
 
     # PASSO 2: Filtra janelas alvo
     jogos_na_janela = filtrar_janelas(jogos_live)
