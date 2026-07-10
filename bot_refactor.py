@@ -868,12 +868,16 @@ def get_stats_apifootball_live(fid):
                 stats["chutes_tot_a"] = stats.get("chutes_tot_a", 0) + int(a_val)
             elif "red cards" in tipo:
                 stats["red_cards_h"], stats["red_cards_a"] = int(h_val), int(a_val)
+            elif tipo == "attacks":
+                stats["ataques_h"], stats["ataques_a"] = int(h_val), int(a_val)
+            elif tipo == "dangerous attacks":
+                stats["ataques_perigosos_h"], stats["ataques_perigosos_a"] = int(h_val), int(a_val)
         # Soma on target + off target = total de chutes
         if "chutes_gol_h" in stats:
             stats["chutes_tot_h"] = stats.get("chutes_tot_h", 0) + stats["chutes_gol_h"]
             stats["chutes_tot_a"] = stats.get("chutes_tot_a", 0) + stats["chutes_gol_a"]
         for side in ["h", "a"]:
-            for k in ["chutes_tot", "chutes_gol", "red_cards"]:
+            for k in ["chutes_tot", "chutes_gol", "red_cards", "ataques", "ataques_perigosos"]:
                 stats.setdefault(f"{k}_{side}", 0)
             stats.setdefault(f"escanteios_{side}", -1)
         print(f"[apifootball Stats] action=get_statistics fid {fid} OK")
@@ -962,6 +966,10 @@ def get_stats_apifootball_v3(match_id):
                 stats["chutes_tot_a"] = stats.get("chutes_tot_a", 0) + int(a_val)
             elif "red cards" in tipo:
                 stats["red_cards_h"], stats["red_cards_a"] = int(h_val), int(a_val)
+            elif tipo == "attacks":
+                stats["ataques_h"], stats["ataques_a"] = int(h_val), int(a_val)
+            elif tipo == "dangerous attacks":
+                stats["ataques_perigosos_h"], stats["ataques_perigosos_a"] = int(h_val), int(a_val)
         # Soma on target + off target = total de chutes
         if "chutes_gol_h" in stats:
             stats["chutes_tot_h"] = stats.get("chutes_tot_h", 0) + stats["chutes_gol_h"]
@@ -1063,6 +1071,10 @@ def get_stats_apifootball_v3(match_id):
                 stats["chutes_tot_a"] = stats.get("chutes_tot_a", 0) + int(a_val)
             elif "red cards" in tipo:
                 stats["red_cards_h"], stats["red_cards_a"] = int(h_val), int(a_val)
+            elif tipo == "attacks":
+                stats["ataques_h"], stats["ataques_a"] = int(h_val), int(a_val)
+            elif tipo == "dangerous attacks":
+                stats["ataques_perigosos_h"], stats["ataques_perigosos_a"] = int(h_val), int(a_val)
         # Soma on target + off target = total de chutes
         if "chutes_gol_h" in stats:
             stats["chutes_tot_h"] = stats.get("chutes_tot_h", 0) + stats["chutes_gol_h"]
@@ -1164,6 +1176,10 @@ def get_stats_apifootball_v3(match_id):
                 stats["chutes_tot_a"] = stats.get("chutes_tot_a", 0) + int(a_val)
             elif "red cards" in tipo:
                 stats["red_cards_h"], stats["red_cards_a"] = int(h_val), int(a_val)
+            elif tipo == "attacks":
+                stats["ataques_h"], stats["ataques_a"] = int(h_val), int(a_val)
+            elif tipo == "dangerous attacks":
+                stats["ataques_perigosos_h"], stats["ataques_perigosos_a"] = int(h_val), int(a_val)
         # Soma on target + off target = total de chutes
         if "chutes_gol_h" in stats:
             stats["chutes_tot_h"] = stats.get("chutes_tot_h", 0) + stats["chutes_gol_h"]
@@ -1636,6 +1652,8 @@ def msg_universal(home, away, minuto, liga, n, mercado, entrada, placar, extra_v
         alvo_a = stats.get("chutes_gol_a", 0)
         cant_h = stats.get("escanteios_h", 0)
         cant_a = stats.get("escanteios_a", 0)
+        atq_perig_h = stats.get("ataques_perigosos_h", 0)
+        atq_perig_a = stats.get("ataques_perigosos_a", 0)
     else:
         chutes_h = 0
         chutes_a = 0
@@ -1643,6 +1661,8 @@ def msg_universal(home, away, minuto, liga, n, mercado, entrada, placar, extra_v
         alvo_a = 0
         cant_h = 0
         cant_a = 0
+        atq_perig_h = 0
+        atq_perig_a = 0
 
     sep = "━━━━━━━━━━━━━━━━━━━━"
     
@@ -1650,16 +1670,19 @@ def msg_universal(home, away, minuto, liga, n, mercado, entrada, placar, extra_v
     total_chutes = chutes_h + chutes_a
     total_alvo = alvo_h + alvo_a
     total_cantos = cant_h + cant_a
+    total_atq_perig = atq_perig_h + atq_perig_a
     if minuto > 0:
         chutes_por_min = round(total_chutes / minuto, 2)
         cantos_por_min = round(total_cantos / minuto, 2)
+        atq_perig_por_min = round(total_atq_perig / minuto, 2)
     else:
         chutes_por_min = 0
         cantos_por_min = 0
+        atq_perig_por_min = 0
 
-    if (chutes_por_min >= 0.4 and alvo_h + alvo_a >= 3) or (cantos_por_min >= 0.25):
+    if (chutes_por_min >= 0.4 and alvo_h + alvo_a >= 3) or (cantos_por_min >= 0.25) or (atq_perig_por_min >= 0.7):
         pressao = "Alta 🔥"
-    elif chutes_por_min >= 0.2 or total_alvo >= 1:
+    elif chutes_por_min >= 0.2 or total_alvo >= 1 or atq_perig_por_min >= 0.4:
         pressao = "Média 💪"
     else:
         pressao = "Baixa 💮"
@@ -1670,6 +1693,8 @@ def msg_universal(home, away, minuto, liga, n, mercado, entrada, placar, extra_v
         alerta = f"Total de {total_alvo} finalizações no alvo - ofensividade alta"
     elif total_chutes >= 8:
         alerta = f"Total de {total_chutes} chutes - pressão constante"
+    elif atq_perig_por_min >= 0.7:
+        alerta = f"{total_atq_perig} ataques perigosos - pressão em campo"
     elif sh + sa >= 1 and minuto >= 60:
         alerta = "Jogo aberto - gols podem sair"
     else:
@@ -1974,7 +1999,7 @@ def run():
 
         stats = {}
         for src_nome, src in [("apifootball", stats_apif), ("ESPN", stats_espn), ("Bzzoiro", stats_bzz)]:
-            for campo in ["chutes_tot_h","chutes_tot_a","chutes_gol_h","chutes_gol_a","escanteios_h","escanteios_a","red_cards_h","red_cards_a","posse_h","posse_a"]:
+            for campo in ["chutes_tot_h","chutes_tot_a","chutes_gol_h","chutes_gol_a","escanteios_h","escanteios_a","red_cards_h","red_cards_a","posse_h","posse_a","ataques_h","ataques_a","ataques_perigosos_h","ataques_perigosos_a"]:
                 if campo not in src:
                     continue
                 val = src[campo]
@@ -2136,15 +2161,24 @@ def run():
                     sent.add(key); total_env += 1
                     registrar_sinal(fid, "OVERGOAL", h, a, mid, extra_val=total_gols)
 
-        # MERCADO 5: ESCANTEIO LIMITE HT (30-38 min, fav confirmado, empatando ou perdendo por 1, sem vermelho)
+        # MERCADO 5: ESCANTEIO LIMITE HT (30-38 min, fav confirmado, empatando ou perdendo por 1, sem vermelho, pressão por ataques)
         if p == 1 and 30 <= m <= 38 and (fav_empatando or fav_perdendo_1) and red_fav == 0:
             hoje = datetime.now(BRT).strftime('%Y%m%d')
             key = f"{fid}_cht_{hoje}"
+            # Verifica pressão via ataques perigosos (0.7/min)
+            atq_p_h = stats.get("ataques_perigosos_h", 0) if stats else 0
+            atq_p_a = stats.get("ataques_perigosos_a", 0) if stats else 0
+            atq_total = atq_p_h + atq_p_a
+            atq_por_min = round(atq_total / m, 2) if m > 0 else 0
+            if atq_total > 0:
+                print(f"[ESC-HT-PRESSAO] {h} x {a} — atq_perig={atq_total}, {atq_por_min}/min")
             cantos_h = stats.get("escanteios_h", -1) if stats else -1
             cantos_a = stats.get("escanteios_a", -1) if stats else -1
             cantos = (max(0, cantos_h) + max(0, cantos_a)) if (cantos_h >= 0 and cantos_a >= 0) else -1
             if cantos < 0:
                 print(f"[SKIP-CORNER-HT] {h} x {a} — cantos={cantos} sem chutes")
+            elif atq_por_min < 0.7 and atq_total > 0:
+                print(f"[SKIP-CORNER-HT] {h} x {a} — ataques perigosos baixos ({atq_por_min}/min), pulando")
             elif key not in sent:
                 mid = send_telegram(msg_universal(h, a, m, liga, 5, "CORNER_HT", "", placar, cantos_atual=cantos, stats=stats, sh=sh, sa=sa, fav_final=fav_final), marca=key, home=h, away=a)
                 if mid:
