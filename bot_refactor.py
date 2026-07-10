@@ -1576,9 +1576,11 @@ def gerar_motivo(mercado, stats, sh, sa, fav_final, cantos_atual=0):
 
 def msg_universal(home, away, minuto, liga, n, mercado, entrada, placar, extra_val=None, cantos_atual=0, stats=None, sh=0, sa=0, fav_final="h"):
     if "CORNER" in mercado or "ESCANTEIO" in mercado:
-        linha = cantos_atual + 0.5
         if cantos_atual > 0:
+            linha = cantos_atual + 0.5
             entrada = f"Mais de {linha}⛳️"
+        else:
+            entrada = "S/L⛳️"
     
     titles = {
         "HT": "⛳️🔥OVER GOL INTERVALO🔥⛳️",
@@ -1627,7 +1629,10 @@ def msg_universal(home, away, minuto, liga, n, mercado, entrada, placar, extra_v
         pressao = "Baixa 💮"
 
     if "ESCANTEIO" in mercado or "CORNER" in mercado:
-        alerta = f"Já saiu {total_cantos} escanteios até o {minuto}\u0027"
+        if total_cantos > 0:
+            alerta = f"Já saiu {total_cantos} escanteios até o {minuto}⛳️"
+        else:
+            alerta = "Escanteios: S/L (dados indisponíveis)"
     elif total_alvo >= 4 and minuto >= 50:
         alerta = f"Total de {total_alvo} finalizações no alvo - ofensividade alta"
     elif total_chutes >= 8:
@@ -2096,10 +2101,13 @@ def run():
             key = f"{fid}_cht_{hoje}"
             cantos_h = stats.get("escanteios_h", -1) if stats else -1
             cantos_a = stats.get("escanteios_a", -1) if stats else -1
-            cantos = (max(0, cantos_h) + max(0, cantos_a)) if (cantos_h >= 0 and cantos_a >= 0) else -1
-            if cantos < 0:
-                print(f"[SKIP-CORNER-HT] {h} x {a} — cantos={cantos} sem chutes")
-            elif key not in sent:
+            if cantos_h >= 0 and cantos_a >= 0:
+                cantos = max(0, cantos_h) + max(0, cantos_a)
+                cantos_label = str(cantos)
+            else:
+                cantos = -1
+                cantos_label = "N/A"
+            if key not in sent:
                 mid = send_telegram(msg_universal(h, a, m, liga, 5, "CORNER_HT", "", placar, cantos_atual=cantos, stats=stats, sh=sh, sa=sa, fav_final=fav_final), marca=key, home=h, away=a)
                 if mid:
                     sent.add(key); total_env += 1
@@ -2111,7 +2119,10 @@ def run():
             key = f"{fid}_cft_{hoje}"
             cantos_h = stats.get("escanteios_h", -1) if stats else -1
             cantos_a = stats.get("escanteios_a", -1) if stats else -1
-            cantos = (max(0, cantos_h) + max(0, cantos_a)) if (cantos_h >= 0 and cantos_a >= 0) else -1
+            if cantos_h >= 0 and cantos_a >= 0:
+                cantos = max(0, cantos_h) + max(0, cantos_a)
+            else:
+                cantos = -1
             if cantos < 0:
                 print(f"[SKIP-CORNER-FT] {h} x {a} — cantos={cantos} sem chutes")
             elif key not in sent:
