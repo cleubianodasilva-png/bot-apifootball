@@ -647,12 +647,7 @@ def get_relatorio_hoje():
     return greens, reds
 
 def enviar_relatorio_diario():
-    # Proteção contra duplicata: só envia 1x por dia
     hoje_key = f"relatorio_{datetime.now(BRT).strftime('%Y-%m-%d')}"
-    sent_ctrl = load_sent()
-    if hoje_key in sent_ctrl:
-        print(f"[Relatório] Já enviado hoje ({hoje_key}), ignorando.")
-        return
     sep = "━━━━━━━━━━━━━━━━━━━━"
     hoje = datetime.now(BRT).strftime("%d/%m/%Y")
     greens, reds = get_relatorio_hoje()
@@ -660,14 +655,14 @@ def enviar_relatorio_diario():
     taxa  = (greens / total * 100) if total > 0 else 0
     msg = (
         f"{sep}\n"
-        f"📊 <b>RELATÓRIO DIÁRIO — {hoje}</b>\n"
+        f"RELATÓRIO DIÁRIO {hoje}\n"
         f"{sep}\n"
-        f"✅ <b>GREEN:</b> {greens}\n"
-        f"🔴 <b>RED:</b> {reds}\n"
-        f"📈 <b>TOTAL DE ENTRADAS:</b> {total}\n"
-        f"🎯 <b>ASSERTIVIDADE:</b> {taxa:.1f}%\n"
+        f"🟢 Greens: {greens}\n"
+        f"🔴 Reds: {reds}\n"
+        f"📈 Total: {total}\n"
+        f"🚨Taxa: {taxa:.0f}% de Acertividade. \n"
         f"{sep}\n"
-        f"⚠️👆<i>Resultados do dia</i>👆⚠️"
+        f"⚠️Jogue com responsabilidade⚠️"
     )
     if send_telegram(msg, botoes=False):
         sent_ctrl.add(hoje_key)
