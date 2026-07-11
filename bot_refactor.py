@@ -2079,12 +2079,11 @@ def check_status_command(total_jogos_live=0, jogos_live=None, jogos_na_janela=No
                     f"{sep}\n"
                     f"📡👉<b>RADAR DE JOGOS AO VIVO</b>👈📡\n"
                     f"{sep}\n"
-                    f"🔴 <b>{total_jogos_live} jogos ao vivo</b>\n"
-                    f"🎯 <b>{len(jogos_na_janela)} na janela alvo</b>\n"
+                    f"🔴 <b>{total_jogos_live} jogos ao vivo</b> | 🎯 <b>{len(jogos_na_janela)} na janela</b>\n"
                     f"{sep}\n"
                     f"🚨<b>JOGOS NO ALVO:</b>\n{linhas_janela}"
                     f"{sep}\n"
-                    f"<b>⏳ FORA DA JANELA:</b>\n{linhas_fora}"
+                    f"⏳<b>FORA DA JANELA:</b>\n{linhas_fora}"
                     f"{sep}"
                 )
                 requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage", json={"chat_id": chat_orig, "text": msg_radar, "parse_mode": "HTML"}, timeout=10)
