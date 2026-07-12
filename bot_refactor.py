@@ -2044,7 +2044,51 @@ def check_status_command(total_jogos_live=0, jogos_live=None, jogos_na_janela=No
             if text == "/relatorio" and not relatorio_respondido:
                 enviar_relatorio_diario()
                 relatorio_respondido = True
-            # Radar removido daqui — tratado exclusivamente em processar_comandos_pendentes
+            elif text == "/radar" and not radar_respondido:
+                jogos_live = jogos_live or []
+                jogos_na_janela = jogos_na_janela or []
+                # Monta lista de jogos na janela
+                if jogos_na_janela:
+                    linhas_janela = ""
+                    for j in jogos_na_janela:
+                        h = j.get("home", "")
+                        a = j.get("away", "")
+                        m = j.get("minuto", 0)
+                        sh = j.get("sh", 0)
+                        sa = j.get("sa", 0)
+                        liga = j.get("liga", "")
+                        linhas_janela += f"🎯 <b>{h} x {a}</b> | {m}' | {sh}x{sa} | {liga}\n"
+                else:
+                    linhas_janela = "Nenhum jogo na janela no momento."
+                # Monta lista de jogos ao vivo fora da janela (até 10)
+                fora_janela = [j for j in jogos_live if j not in jogos_na_janela]
+                if fora_janela:
+                    linhas_fora = ""
+                    for j in fora_janela[:10]:
+                        h = j.get("home", "")
+                        a = j.get("away", "")
+                        m = j.get("minuto", 0)
+                        sh = j.get("sh", 0)
+                        sa = j.get("sa", 0)
+                        linhas_fora += f"⏳ {h} x {a} | {m}' | {sh}x{sa}\n"
+                    if len(fora_janela) > 10:
+                        linhas_fora += f"... e mais {len(fora_janela)-10} jogos"
+                else:
+                    linhas_fora = "—"
+                msg_radar = (
+                    f"{sep}\n"
+                    f"📡👉<b>RADAR DE JOGOS AO VIVO</b>👈📡\n"
+                    f"{sep}\n"
+                    f"🔴 <b>{total_jogos_live} jogos ao vivo</b>\n"
+                    f"🎯 <b>{len(jogos_na_janela)} na janela alvo</b>\n"
+                    f"{sep}\n"
+                    f"🚨<b>JOGOS NO ALVO:</b>\n{linhas_janela}"
+                    f"{sep}\n"
+                    f"<b>⏳ FORA DA JANELA:</b>\n{linhas_fora}"
+                    f"{sep}"
+                )
+                requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage", json={"chat_id": chat_orig, "text": msg_radar, "parse_mode": "HTML"}, timeout=10)
+                radar_respondido = True
         if new_last_id > last_id:
             with open(LAST_UPDATE_FILE, 'w') as f: json.dump({"last_id": new_last_id}, f)
             # Salva no GitHub para persistir entre execuções
@@ -2077,18 +2121,18 @@ def run():
     fids_apif  = {j["fid"] for j in jogos_apif}
 
     # ─────────────────────────────────────────────────────────────
-    # PASSO 1B: ESPN — 2ª fonte, complementa o que apifootball não cobriu (DESLIGADA no Zapia)
+    # PASSO 1B: ESPN — 2ª fonte, complementa o que apifootball não cobriu
     # ─────────────────────────────────────────────────────────────
     jogos_espn = get_jogos_espn(fids_apif)
 
     # ─────────────────────────────────────────────────────────────
     # PASSO 1C: Bzzoiro — 3ª fonte, preenche o que faltar
     # ─────────────────────────────────────────────────────────────
-    jogos_bzz = get_jogos_bzzoiro(fids_apif | {j["fid"] for j in (jogos_espn if jogos_espn else [])})
+    jogos_bzz = get_jogos_bzzoiro(fids_apif | {j["fid"] for j in jogos_espn})
 
     # Junta tudo na ordem: apifootball > ESPN > Bzzoiro
     jogos_live = jogos_apif + jogos_espn + jogos_bzz
-    print(f'[Total] {len(jogos_live)} jogos ao vivo (apifootball={len(jogos_apif)} + ESPN={len(jogos_espn)} + bzzoiro={len(jogos_bzz)})')
+    print(f"[Total] {len(jogos_live)} jogos ao vivo (apifootball={len(jogos_apif)} + ESPN={len(jogos_espn)} + bzzoiro={len(jogos_bzz)})")
 
     # PASSO 2: Filtra janelas alvo
     jogos_na_janela = filtrar_janelas(jogos_live)
@@ -2270,8 +2314,20 @@ def run():
             (sh + sa) == 1
         )
 
+        # APPM — Ataques Perigosos Por Minuto (filtro geral anti-jogo morno)
+        _aph_val = stats.get("ataques_perigosos_h", 0) if stats else 0
+        _apa_val = stats.get("ataques_perigosos_a", 0) if stats else 0
+        _apt_val = _aph_val + _apa_val
+        _appm_total = round(_apt_val / m, 2) if m > 0 else 0
+        _appm_h = round(_aph_val / m, 2) if m > 0 else 0
+        _appm_a = round(_apa_val / m, 2) if m > 0 else 0
+        if _appm_total > 0 and (_appm_total < 1.5 or _appm_h < 0.8 or _appm_a < 0.8):
+            print(f"[APPM-BAIXO] {h} x {a} — total={_appm_total}/min, H={_appm_h}/min, A={_appm_a}/min, jogo morno filtrado")
+        # APPM aprovado: total ≥ 1.5 E ambos os times ≥ 0.80
+        appm_valido = _appm_total >= 1 or _appm_h >= 1 or _appm_a >= 1
+
         # MERCADO 1: OVER 0.5 HT (10-26 min, 0x0, favorito empatando, sem vermelho do fav)
-        if p == 1 and 10 <= m <= 26 and sh == 0 and sa == 0 and fav_empatando and red_fav == 0:
+        if p == 1 and 10 <= m <= 26 and sh == 0 and sa == 0 and fav_empatando and red_fav == 0 and appm_valido:
             hoje = datetime.now(BRT).strftime('%Y%m%d')
             key = f"{dedup_id}_ht_{hoje}"
             if key not in sent:
@@ -2287,7 +2343,9 @@ def run():
             chutes_gol_total = (stats.get("chutes_gol_h", 0) + stats.get("chutes_gol_a", 0)) if stats else 0
             chutes_gol_fav   = stats.get(f"chutes_gol_{fav_final}", 0) if stats else 0
             prob_15_ft, prob_05_ht = calcular_prob_gols_ht(chutes_tot_total, chutes_gol_total, m)
-            if (odd_fav_num <= 1.50 and prob_15_ft >= 75 and prob_05_ht >= 65):
+            appm_fav = chutes_gol_fav
+            print(f"[LIMITE-HT] {h} x {a} | odd_fav={odd_fav_num} | prob_15ft={prob_15_ft}% | prob_05ht={prob_05_ht}% | appm={appm_fav}")
+            if (odd_fav_num <= 1.50 and prob_15_ft >= 75 and prob_05_ht >= 65 and appm_fav >= 1 and appm_valido):
                 hoje = datetime.now(BRT).strftime('%Y%m%d')
                 key = f"{dedup_id}_limiteht_{hoje}"
                 if key not in sent:
@@ -2297,7 +2355,7 @@ def run():
                         registrar_sinal(fid, "LIMITEHT", h, a, mid)
 
         # MERCADO 2: AMBAS MARCAM BTTS (55-75 min, fav perdendo por 1, sem vermelho do fav)
-        if p == 2 and 55 <= m <= 75 and ((sh == 1 and sa == 0) or (sh == 0 and sa == 1)) and fav_perdendo_1 and red_fav == 0:
+        if p == 2 and 55 <= m <= 75 and ((sh == 1 and sa == 0) or (sh == 0 and sa == 1)) and fav_perdendo_1 and red_fav == 0 and appm_valido:
             hoje = datetime.now(BRT).strftime('%Y%m%d')
             key = f"{dedup_id}_btts_{hoje}"
             if key not in sent:
@@ -2307,7 +2365,7 @@ def run():
                     registrar_sinal(fid, "BTTS", h, a, mid)
 
         # MERCADO 3: OVER 1.5 FT (55-75 min, fav empatando ou perdendo por 1, placares: 0x0/1x0/0x1/1x1, sem vermelho do fav)
-        if p == 2 and 55 <= m <= 75 and ((sh == 1 and sa == 0) or (sh == 0 and sa == 1)) and fav_perdendo_1 and red_fav == 0:
+        if p == 2 and 55 <= m <= 75 and ((sh == 1 and sa == 0) or (sh == 0 and sa == 1)) and fav_perdendo_1 and red_fav == 0 and appm_valido:
             hoje = datetime.now(BRT).strftime('%Y%m%d')
             key = f"{dedup_id}_oft_{hoje}"
             if key not in sent:
@@ -2318,7 +2376,7 @@ def run():
 
         # MERCADO 4: OVER GOL PARTIDA (55-75 min, placares 0x0/1x1/0x1/1x0, favorito empatando ou perdendo por 1)
         overgoal_valido = (fav_empatando or fav_perdendo_1)
-        if p == 2 and 55 <= m <= 75 and overgoal_valido and red_fav == 0:
+        if p == 2 and 55 <= m <= 75 and overgoal_valido and red_fav == 0 and appm_valido:
             hoje = datetime.now(BRT).strftime('%Y%m%d')
             key = f"{dedup_id}_overgoal_{hoje}"
             # Linha dinâmica: sempre acima do total de gols atual
@@ -2340,7 +2398,7 @@ def run():
                     registrar_sinal(fid, "OVERGOAL", h, a, mid, extra_val=total_gols)
 
         # MERCADO 5: ESCANTEIO LIMITE HT (28-38 min, fav confirmado, empatando ou perdendo por 1, sem vermelho, APPM ≥ 1)
-        if p == 1 and 28 <= m <= 38 and (fav_empatando or fav_perdendo_1) and red_fav == 0:
+        if p == 1 and 28 <= m <= 38 and (fav_empatando or fav_perdendo_1) and red_fav == 0 and appm_valido:
             hoje = datetime.now(BRT).strftime('%Y%m%d')
             key = f"{dedup_id}_cht_{hoje}"
             cantos_h = stats.get("escanteios_h", -1) if stats else -1
@@ -2355,7 +2413,7 @@ def run():
                     registrar_sinal(fid, "CORNER_HT", h, a, mid, extra_val=cantos)
 
         # MERCADO 6: ESCANTEIO LIMITE FT (78-88 min, fav confirmado, empatando ou perdendo por 1, sem vermelho)
-        if p == 2 and 78 <= m <= 88 and (fav_empatando or fav_perdendo_1) and red_fav == 0:
+        if p == 2 and 78 <= m <= 88 and (fav_empatando or fav_perdendo_1) and red_fav == 0 and appm_valido:
             hoje = datetime.now(BRT).strftime('%Y%m%d')
             key = f"{dedup_id}_cft_{hoje}"
             cantos_h = stats.get("escanteios_h", -1) if stats else -1
@@ -2396,12 +2454,17 @@ def run():
         processar_comandos_pendentes(TG_TOKEN, CHAT_ID, jogos_live, jogos_na_janela)
     except Exception as e:
         print(f"[CMD] Erro chamando comandos: {e}")
-    
+    # Processa comandos pendentes com dados reais
+    try:
+        processar_comandos_pendentes(TG_TOKEN, CHAT_ID, jogos_live, jogos_na_janela)
+    except Exception as e:
+        print(f"[CMD] Erro chamando comandos: {e}")
     print(f"Finalizado. Enviados: {total_env}")
 
 
 
 def processar_comandos_pendentes(token, chat_id, jogos_live=None, jogos_na_janela=None):
+    """Processa comandos /relatorio e /radar com checkpoint de update_id."""
     if jogos_live is None: jogos_live = []
     if jogos_na_janela is None: jogos_na_janela = []
     max_id = 0
@@ -2414,56 +2477,47 @@ def processar_comandos_pendentes(token, chat_id, jogos_live=None, jogos_na_janel
                 msg = update.get("message", {})
                 text = (msg.get("text", "") or "").strip()
                 chat_orig = msg.get("chat", {}).get("id", 0)
+                sep = "\n" + "\u2501" * 25 + "\n"
                 if "/radar" in text:
-                    sep = "━━━━━━━━━━━━━━━━━━━━"
                     linhas_jan = ""
                     for j in jogos_na_janela:
                         h = j.get("home",""); a = j.get("away","")
                         m = j.get("minuto",""); sh = j.get("sh",0); sa = j.get("sa",0)
                         liga = j.get("liga","")
-                        linhas_jan += f"🎯 <b>{h} x {a}</b> | {m}' | {sh}x{sa} | {liga}\n"
+                        linhas_jan += f"\U0001f3af <b>{h} x {a}</b> | {m}' | {sh}x{sa} | {liga}\n"
                     if not linhas_jan:
                         linhas_jan = "Nenhum jogo na janela no momento."
-                    
-                    fora = [j for j in jogos_live if j not in jogos_na_janela][:5]
+                    fora = [j for j in jogos_live if j not in jogos_na_janela][:10]
                     linhas_fora = ""
                     for j in fora:
                         h = j.get("home",""); a = j.get("away","")
                         m = j.get("minuto",""); sh = j.get("sh",0); sa = j.get("sa",0)
-                        linhas_fora += f"⚽ {h} x {a} | {m}' | {sh}x{sa}\n"
-                    if not linhas_fora:
-                        linhas_fora = "—"
-                    
+                        linhas_fora += f"\u23f3 {h} x {a} | {m}' | {sh}x{sa}\n"
+                    if not linhas_fora: linhas_fora = "\u2014"
                     msg_radar = (
-                        f"{sep}
-"
-                        f"📡 <b>RADAR DE JOGOS AO VIVO</b>
-"
-                        f"{sep}
-"
-                        f"🔴 <b>{len(jogos_live)} jogos</b> | 🎯 <b>{len(jogos_na_janela)} na mira</b>
-"
-                        f"{sep}
-"
-                        f"🚨 <b>NA MIRA:</b>
-{linhas_jan}
-"
-                        f"{sep}
-"
-                        f"⏳ <b>OUTROS JOGOS:</b>
-{linhas_fora}"
+                        f"{sep}\n"
+                        f"\U0001f4e1\U0001f449<b>RADAR DE JOGOS AO VIVO</b>\U0001f448\U0001f4e1\n"
+                        f"{sep}\n"
+                        f"\u26a0\ufe0f <b>{len(jogos_live)} jogos ao vivo</b>\n"
+                        f"\U0001f3af <b>{len(jogos_na_janela)} na janela alvo</b>\n"
+                        f"{sep}\n"
+                        f"\U0001f6a8<b>JOGOS NO ALVO:</b>\n{linhas_jan}"
+                        f"{sep}\n"
+                        f"<b>\u23f3 FORA DA JANELA:</b>\n{linhas_fora}"
                         f"{sep}"
                     )
                     requests.post(f"https://api.telegram.org/bot{token}/sendMessage",
                                   json={"chat_id": chat_orig, "text": msg_radar, "parse_mode": "HTML"})
-                    print(f"[RADAR] Enviado com sucesso")
+                    print(f"[CMD] Radar respondido com {len(jogos_live)} jogos live, {len(jogos_na_janela)} na janela")
                 elif "/relatorio" in text:
                     try: enviar_relatorio_diario()
                     except: pass
-    except: pass
-    if max_id > 0:
-        try: requests.get(f"https://api.telegram.org/bot{token}/getUpdates?offset={max_id+1}", timeout=5)
-        except: pass
-
+        if max_id > 0:
+            try:
+                off = max_id
+                requests.get(f"https://api.telegram.org/bot{token}/getUpdates?offset={off+1}", timeout=5)
+            except: pass
+    except Exception as e:
+        print(f"[CMD] Erro processar comandos: {e}")
 if __name__ == "__main__":
     run()
