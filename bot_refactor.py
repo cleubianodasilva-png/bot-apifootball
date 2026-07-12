@@ -2428,7 +2428,7 @@ def processar_comandos_pendentes(token, chat_id, jogos_live=None, jogos_na_janel
                 msg = update.get("message", {})
                 text = (msg.get("text", "") or "").strip()
                 chat_orig = msg.get("chat", {}).get("id", 0)
-sep = "\n" + "\u2501" * 25 + "\n"
+                sep = "\\n" + "\\u2501" * 25 + "\\n"
                 if "/radar" in text:
                     linhas_jan = ""
                     for j in jogos_na_janela:
@@ -2460,7 +2460,7 @@ sep = "\n" + "\u2501" * 25 + "\n"
                     )
                     requests.post(f"https://api.telegram.org/bot{token}/sendMessage",
                                   json={"chat_id": chat_orig, "text": msg_radar, "parse_mode": "HTML"})
-                    print(f"[RADAR] Enviado — {len(jogos_live)} ao vivo, {len(jogos_na_janela)} na janela")
+                    print(f"[RADAR] Enviado - {len(jogos_live)} ao vivo, {len(jogos_na_janela)} na janela")
                 elif "/relatorio" in text:
                     try: enviar_relatorio_diario()
                     except: pass
