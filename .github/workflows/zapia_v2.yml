@@ -27,4 +27,4 @@ jobs:
           APIFOOTBALL_KEY: ${{ secrets.APIFOOTBALL_KEY }}
           BZZOIRO_TOKEN: ${{ secrets.BZZOIRO_TOKEN }}
           GH_PAT: ${{ secrets.GH_PAT }}
-        run: python bot_zapia.py
+        run: python bot_refactor.py
