@@ -2089,12 +2089,6 @@ def check_status_command(total_jogos_live=0, jogos_live=None, jogos_na_janela=No
                     f"<b>⏳ FORA DA JANELA:</b>\n{linhas_fora}"
                     f"{sep}"
                 )
-                    f"{sep}\n"
-                    f"🚨<b>JOGOS NO ALVO:</b>\n{linhas_janela}"
-                    f"{sep}\n"
-                    f"<b>⏳ FORA DA JANELA:</b>\n{linhas_fora}"
-                    f"{sep}"
-                )
                 requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage", json={"chat_id": chat_orig, "text": msg_radar, "parse_mode": "HTML"}, timeout=10)
                 radar_respondido = True
         if new_last_id > last_id:
@@ -2514,13 +2508,6 @@ def processar_comandos_pendentes(token, chat_id, jogos_live=None, jogos_na_janel
                         f"🚨<b>JOGOS NO ALVO:</b>\n{linhas_jan}"
                         f"{sep}\n"
                         f"<b>⏳ FORA DA JANELA:</b>\n{linhas_fora}"
-                        f"{sep}"
-                    )
-                        f"\U0001f3af <b>{len(jogos_na_janela)} na janela alvo</b>\n"
-                        f"{sep}\n"
-                        f"\U0001f6a8<b>JOGOS NO ALVO:</b>\n{linhas_jan}"
-                        f"{sep}\n"
-                        f"<b>\u23f3 FORA DA JANELA:</b>\n{linhas_fora}"
                         f"{sep}"
                     )
                     requests.post(f"https://api.telegram.org/bot{token}/sendMessage",
