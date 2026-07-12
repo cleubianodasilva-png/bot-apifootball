@@ -2380,7 +2380,7 @@ def run():
         _appm_a = round(_apa_val / m, 2) if m > 0 else 0
         if _appm_total > 0 and (_appm_total < 1.5 or (_appm_h < 0.8 and _appm_a < 0.8)):
             print(f"[APPM-BAIXO] {h} x {a} — total={_appm_total}/min, H={_appm_h}/min, A={_appm_a}/min, jogo morno filtrado")
-        # APPM aprovado: total ≥ 1.5 E ambos os times ≥ 0.80
+        # APPM aprovado: total ≥ 1.5 E (H ≥ 0.80 OU A ≥ 0.80)
         appm_valido = _appm_total >= 1.5 and (_appm_h >= 0.8 or _appm_a >= 0.8)
 
         # MERCADO 1: OVER 0.5 HT (10-26 min, 0x0, favorito empatando, sem vermelho do fav)
