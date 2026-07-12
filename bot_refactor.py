@@ -2534,7 +2534,7 @@ def processar_comandos_pendentes(token, chat_id, jogos_live=None, jogos_na_janel
                 msg = update.get("message", {})
                 text = (msg.get("text", "") or "").strip()
                 chat_orig = msg.get("chat", {}).get("id", 0)
-                sep = "\n" + "\u2501" * 20 + "\n"
+                sep = "━" * 20
                 if "/radar" in text:
                     linhas_jan = ""
                     for j in jogos_na_janela:
