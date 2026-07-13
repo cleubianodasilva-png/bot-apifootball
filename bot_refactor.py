@@ -64,6 +64,23 @@ def gerar_layout_relatorio(greens, reds, data_str):
         f"{sep}\n"
         f"⚠️👆Resultados do dia👆⚠️"
     )
+
+def gerar_layout_relatorio_mensal(greens, reds, mes_nome, dias_ativos):
+    sep = "\u2501" * 20
+    total = greens + reds
+    taxa = (greens / total * 100) if total > 0 else 0.0
+    msg = f"{sep}\n"
+    msg += f"<b>\U0001f4ca RELAT\u00d3RIO MENSAL \u2014 {mes_nome}</b>\n"
+    msg += f"{sep}\n"
+    msg += f"\u2705 GREEN: <b>{greens}</b>\n"
+    msg += f"\U0001f534 RED: <b>{reds}</b>\n"
+    msg += f"\U0001f4c8 TOTAL DE ENTRADAS: <b>{total}</b>\n"
+    msg += f"\U0001f3af ASSERTIVIDADE: <b>{taxa:.1f}%</b>\n"
+    msg += f"{sep}\n"
+    msg += f"\U0001f4c5 Dias com entradas: <b>{dias_ativos}</b>\n"
+    msg += "\u26a0\ufe0f\U0001f446Resultados do m\u00eas\U0001f446\u26a0\ufe0f"
+    return msg
+
 def gerar_layout_radar(jogos_ao_vivo, jogos_na_janela):
     sep = "━━━━━━━━━━━━━━━━━━━━"
     texto_jan = ""
@@ -634,6 +651,21 @@ def salvar_resultado(resultado):
     registros.append({"data": hoje, "resultado": resultado, "timestamp": datetime.now(BRT).isoformat()})
     _save_resultados_github(registros)
 
+
+def get_relatorio_mensal():
+    hoje = datetime.now(BRT)
+    mes_str = hoje.strftime("%Y-%m")
+    greens, reds = 0, 0
+    registros = _load_resultados_github()
+    dias_ativos = set()
+    for r in registros:
+        data_reg = r.get("data", "")
+        if data_reg.startswith(mes_str):
+            dias_ativos.add(data_reg)
+            if r.get("resultado") == "green": greens += 1
+            else: reds += 1
+    return greens, reds, len(dias_ativos)
+
 def get_relatorio_hoje():
     hoje = datetime.now(BRT).strftime("%Y-%m-%d")
     greens, reds = 0, 0
@@ -643,6 +675,15 @@ def get_relatorio_hoje():
             if r.get("resultado") == "green": greens += 1
             else: reds += 1
     return greens, reds
+
+
+def enviar_relatorio_mensal():
+    hoje = datetime.now(BRT)
+    meses_pt = ["Janeiro","Fevereiro","Mar\u00e7o","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"]
+    mes_nome = f"{meses_pt[hoje.month-1]}/{hoje.year}"
+    greens, reds, dias_ativos = get_relatorio_mensal()
+    msg = gerar_layout_relatorio_mensal(greens, reds, mes_nome, dias_ativos)
+    return msg
 
 def enviar_relatorio_diario():
     hoje_key = f"relatorio_{datetime.now(BRT).strftime('%Y-%m-%d')}"
@@ -2073,6 +2114,11 @@ def check_status_command(total_jogos_live=0, jogos_live=None, jogos_na_janela=No
             if agora_ts - msg_ts > 600: # Ignora comandos com mais de 10 minutos
                 continue
             pass  # responde em qualquer chat
+            if text == "/relatoriomensal" and not relatorio_respondido:
+                msg = enviar_relatorio_mensal()
+                requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
+                              json={"chat_id": chat_orig, "text": msg, "parse_mode": "HTML"})
+                relatorio_respondido = True
             if text == "/relatorio" and not relatorio_respondido:
                 enviar_relatorio_diario()
                 relatorio_respondido = True
@@ -2566,6 +2612,13 @@ def processar_comandos_pendentes(token, chat_id, jogos_live=None, jogos_na_janel
                     requests.post(f"https://api.telegram.org/bot{token}/sendMessage",
                                   json={"chat_id": chat_orig, "text": msg_radar, "parse_mode": "HTML"})
                     print(f"[CMD] Radar respondido com {len(jogos_live)} jogos live, {len(jogos_na_janela)} na janela")
+                elif "/relatoriomensal" in text:
+                    try:
+                        msg = enviar_relatorio_mensal()
+                        requests.post(f"https://api.telegram.org/bot{token}/sendMessage",
+                                      json={"chat_id": chat_orig, "text": msg, "parse_mode": "HTML"})
+                    except Exception as e:
+                        print(f"[REL-MENSAL] Erro: {e}")
                 elif "/relatorio" in text:
                     try: enviar_relatorio_diario()
                     except: pass
