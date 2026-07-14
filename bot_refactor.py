@@ -2385,6 +2385,18 @@ def run():
             stats.setdefault(k, -1)
         for k in ["red_cards_h","red_cards_a"]:
             stats.setdefault(k, 0)
+
+        # Sanidade: valida escanteios contra o minuto da partida
+        if stats.get("escanteios_h", -1) >= 0 and stats.get("escanteios_a", -1) >= 0:
+            total_esc = stats["escanteios_h"] + stats["escanteios_a"]
+            max_esc_esperado = max(1, int(m * 0.22) + 1)  # ~1 corner a cada 4.5 min + folga
+            if total_esc > max_esc_esperado:
+                fonte_esc_h = stats.get("_fonte_escanteios_h", "?")
+                fonte_esc_a = stats.get("_fonte_escanteios_a", "?")
+                print(f"[SANITY] Escanteios suspeitos: {stats['escanteios_h']}x{stats['escanteios_a']} (total {total_esc}) no min {m} — fontes: {fonte_esc_h}/{fonte_esc_a}. Total max esperado: {max_esc_esperado}. Ignorando escanteios dessa fonte.")
+                stats["escanteios_h"] = -1
+                stats["escanteios_a"] = -1
+
         print(f"[STATS-FUSION] {h} x {a} | chutes: {stats.get('chutes_tot_h',0)}/{stats.get('chutes_tot_a',0)} | cantos: {stats.get('escanteios_h',-1)}/{stats.get('escanteios_a',-1)}")
 
         # Verifica se tem dados reais — sem stats E sem odds, pula o jogo
