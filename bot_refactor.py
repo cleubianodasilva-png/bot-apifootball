@@ -2557,7 +2557,7 @@ def run():
             prob_15_ft, prob_05_ht = calcular_prob_gols_ht(chutes_tot_total, chutes_gol_total, m)
             
             # Fallback: se não tem stats de chutes nem ataques, usa odd do favorito como proxy
-            if chutes_tot_total == 0 and odd_fav_num <= 1.50:
+            if chutes_tot_total == 0 and (odd_fav_num <= 1.50 or odd_fav_num >= 90):
                 prob_15_ft = max(prob_15_ft, 80)
                 prob_05_ht = max(prob_05_ht, 70)
                 if not appm_ht_ok and _aph_val == 0 and _apa_val == 0:
