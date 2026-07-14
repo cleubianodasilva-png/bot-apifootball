@@ -2380,39 +2380,41 @@ def run():
                     stats[campo] = val
                     stats["_fonte_"+campo] = src_nome
 
-        # === ESCANTEIOS: cross-validation entre fontes ===
-        # Coleta o que cada API diz sobre escanteios
-        esc_srcs = {
-            "apifootball": (stats_apif.get("escanteios_h", -1), stats_apif.get("escanteios_a", -1)),
-            "ESPN": (stats_espn.get("escanteios_h", -1), stats_espn.get("escanteios_a", -1)),
-            "Bzzoiro": (stats_bzz.get("escanteios_h", -1), stats_bzz.get("escanteios_a", -1)),
-        }
-        # Filtra só fontes com dados reais (ambos >= 0)
-        esc_disponiveis = {nome: (h, a) for nome, (h, a) in esc_srcs.items() if h >= 0 and a >= 0}
-        
-        if esc_disponiveis:
-            # Prioridade absoluta: apifootball > ESPN > Bzzoiro
-            for prio in ["apifootball", "ESPN", "Bzzoiro"]:
-                if prio in esc_disponiveis:
-                    eh, ea = esc_disponiveis[prio]
-                    total_esc = eh + ea
-                    # Validação de sanidade: ~1 escanteio a cada 5 min no MAXIMO
-                    max_esc_sanity = max(1, int(m / 5))
-                    
-                    if total_esc <= max_esc_sanity:
-                        stats["escanteios_h"] = eh
-                        stats["escanteios_a"] = ea
-                        stats["_fonte_escanteios"] = prio
-                        print(f"[ESC-FUSION] Usando {prio}: {eh}x{ea} (total {total_esc}) no min {m}")
-                        break
-                    else:
-                        # Se a fonte primária passou do sanity, tenta próxima
-                        print(f"[ESC-FUSION] {prio} rejeitado: {eh}x{ea} (total {total_esc}) > max {max_esc_sanity} no min {m}. Tentando proxima fonte...")
-                        continue
+        # === ESCANTEIOS: apifootball é a fonte da verdade ===
+        # Só usa Bzzoiro em último caso, com validação ultra restritiva
+        esc_h, esc_a = -1, -1
+        esc_fonte = None
 
-        # Fallback: se nenhuma fonte passou, zera
-        stats.setdefault("escanteios_h", -1)
-        stats.setdefault("escanteios_a", -1)
+        # Nível 1: apifootball (fonte da verdade)
+        if stats_apif.get("escanteios_h", -1) >= 0 and stats_apif.get("escanteios_a", -1) >= 0:
+            esc_h, esc_a = stats_apif["escanteios_h"], stats_apif["escanteios_a"]
+            esc_fonte = "apifootball"
+            print(f"[ESC] apifootball: {esc_h}x{esc_a}")
+
+        # Nível 2: ESPN (só se apifootball falhou)
+        if esc_fonte is None and stats_espn.get("escanteios_h", -1) >= 0 and stats_espn.get("escanteios_a", -1) >= 0:
+            esc_h, esc_a = stats_espn["escanteios_h"], stats_espn["escanteios_a"]
+            esc_fonte = "ESPN"
+            print(f"[ESC] ESPN: {esc_h}x{esc_a}")
+
+        # Nível 3: Bzzoiro SÓ se for a única opção E passar sanity de 1 corner/10min
+        if esc_fonte is None and stats_bzz.get("escanteios_h", -1) >= 0 and stats_bzz.get("escanteios_a", -1) >= 0:
+            total_bzz = stats_bzz["escanteios_h"] + stats_bzz["escanteios_a"]
+            max_esc = max(1, int(m / 10))  # 1 corner a cada 10 min (média real)
+            if total_bzz <= max_esc:
+                esc_h, esc_a = stats_bzz["escanteios_h"], stats_bzz["escanteios_a"]
+                esc_fonte = "Bzzoiro"
+                print(f"[ESC] Bzzoiro (aprovado sanity): {esc_h}x{esc_a} total {total_bzz} <= {max_esc}")
+            else:
+                print(f"[ESC] Bzzoiro REJEITADO: {stats_bzz['escanteios_h']}x{stats_bzz['escanteios_a']} (total {total_bzz}) > max {max_esc} no min {m}")
+
+        if esc_fonte:
+            stats["escanteios_h"] = esc_h
+            stats["escanteios_a"] = esc_a
+            stats["_fonte_escanteios"] = esc_fonte
+        else:
+            stats.setdefault("escanteios_h", -1)
+            stats.setdefault("escanteios_a", -1)
 
         for k in ["chutes_tot_h","chutes_tot_a","chutes_gol_h","chutes_gol_a"]:
             stats.setdefault(k, 0)
