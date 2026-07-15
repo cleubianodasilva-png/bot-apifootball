@@ -767,7 +767,9 @@ def _fetch_liga(liga_slug):
                 resultado.append({
                     "fid": eid, "home": home, "away": away,
                     "sh": sh, "sa": sa, "minuto": minuto,
-                    "period": period, "liga": liga, "liga_slug": liga_slug, "source": "espn"
+                    "period": period, "liga": liga, "liga_slug": liga_slug, "source": "espn",
+                    "home_id": str(home_t.get("team", {}).get("id", "")),
+                    "away_id": str(away_t.get("team", {}).get("id", ""))
                 })
             except:
                 continue
@@ -981,7 +983,9 @@ def get_jogos_bzzoiro(fids_existentes):
                 "fid": fid, "fid_raw": str(ev.get("id", "")),
                 "home": ev.get("home_team", ""), "away": ev.get("away_team", ""),
                 "sh": sh, "sa": sa, "minuto": minuto,
-                "period": period, "liga": liga_nome, "source": "bzzoiro"
+                "period": period, "liga": liga_nome, "source": "bzzoiro",
+                "home_id": str(ev.get("home_team_id", "")),
+                "away_id": str(ev.get("away_team_id", ""))
             })
         print(f"[APIF-v3] {len(jogos)} novos jogos (de {len(data)} totais)")
         return jogos
@@ -1095,7 +1099,9 @@ def get_jogos_bzzoiro(fids_existentes):
                 "fid": fid, "fid_raw": str(ev.get("id", "")),
                 "home": ev.get("home_team", ""), "away": ev.get("away_team", ""),
                 "sh": sh, "sa": sa, "minuto": minuto,
-                "period": period, "liga": liga_nome, "source": "bzzoiro"
+                "period": period, "liga": liga_nome, "source": "bzzoiro",
+                "home_id": str(ev.get("home_team_id", "")),
+                "away_id": str(ev.get("away_team_id", ""))
             })
         print(f"[APIF-v3] {len(jogos)} novos jogos (de {len(data)} totais)")
         return jogos
@@ -1215,7 +1221,9 @@ def get_jogos_bzzoiro(fids_existentes):
                 "fid": fid, "fid_raw": str(ev.get("id", "")),
                 "home": ev.get("home_team", ""), "away": ev.get("away_team", ""),
                 "sh": sh, "sa": sa, "minuto": minuto,
-                "period": period, "liga": liga_nome, "source": "bzzoiro"
+                "period": period, "liga": liga_nome, "source": "bzzoiro",
+                "home_id": str(ev.get("home_team_id", "")),
+                "away_id": str(ev.get("away_team_id", ""))
             })
         print(f"[APIF-v3] {len(jogos)} novos jogos (de {len(data)} totais)")
         return jogos
@@ -1248,7 +1256,9 @@ def get_jogos_bzzoiro(fids_existentes):
                 "fid": fid, "fid_raw": str(ev.get("id", "")),
                 "home": ev.get("home_team", ""), "away": ev.get("away_team", ""),
                 "sh": sh, "sa": sa, "minuto": minuto,
-                "period": period, "liga": liga_nome, "source": "bzzoiro"
+                "period": period, "liga": liga_nome, "source": "bzzoiro",
+                "home_id": str(ev.get("home_team_id", "")),
+                "away_id": str(ev.get("away_team_id", ""))
             })
         print(f"[Bzzoiro] {len(jogos)} novos jogos")
         return jogos
@@ -2242,7 +2252,112 @@ def get_team_ht_stats(team_id, team_name):
         HISTORICO_CACHE[team_id] = None
         return None
 
+
+def get_team_ht_stats_espn(team_id, team_name):
+    """Fallback: últimos jogos do time via ESPN (só placar final, sem gols HT)."""
+    cache_key = f"espn_{team_id}"
+    if cache_key in HISTORICO_CACHE:
+        return HISTORICO_CACHE[cache_key]
+    try:
+        url = f"https://site.api.espn.com/apis/site/v2/sports/soccer/all/teams/{team_id}/schedule?season=2026"
+        r = requests.get(url, timeout=8)
+        if r.status_code != 200:
+            HISTORICO_CACHE[cache_key] = None
+            return None
+        data = r.json()
+        events = data.get("events", [])
+        jogos_ft = []
+        for e in events:
+            comp = e.get("competitions", [{}])[0]
+            status = comp.get("status", {}).get("type", {}).get("name", "")
+            if "FULL_TIME" not in status:
+                continue
+            teams = comp.get("competitors", [])
+            if len(teams) < 2:
+                continue
+            sh = int(teams[0].get("score", 0) or 0)
+            sa = int(teams[1].get("score", 0) or 0)
+            if sh > 0 or sa > 0:
+                jogos_ft.append((sh, sa))
+        jogos_ft = jogos_ft[-10:]
+        if not jogos_ft:
+            HISTORICO_CACHE[cache_key] = None
+            return None
+        total = len(jogos_ft)
+        total_gols = sum(sh + sa for sh, sa in jogos_ft)
+        ambas = sum(1 for sh, sa in jogos_ft if sh > 0 and sa > 0)
+        result = {
+            "pct_ht": 50,
+            "media_gols": round(total_gols / total, 1),
+            "pct_bt": round(ambas / total * 100, 1),
+            "total_parts": total,
+            "_fonte": "ESPN"
+        }
+        HISTORICO_CACHE[cache_key] = result
+        return result
+    except Exception as e:
+        print(f"[ESPN-HIST] {team_name} ({team_id}): {e}")
+        HISTORICO_CACHE[cache_key] = None
+        return None
+
+
+def get_team_ht_stats_bzzoiro(team_id, team_name):
+    """Fallback: histórico via Bzzoiro (tem score HT!)."""
+    cache_key = f"bzz_{team_id}"
+    if cache_key in HISTORICO_CACHE:
+        return HISTORICO_CACHE[cache_key]
+    try:
+        headers = {"Authorization": "Token " + BZZOIRO_TOKEN}
+        url = f"https://sports.bzzoiro.com/api/v2/events/?status=finished&home_team_id={team_id}&limit=20"
+        r = requests.get(url, headers=headers, timeout=10)
+        if r.status_code != 200:
+            url = f"https://sports.bzzoiro.com/api/v2/events/?status=finished&away_team_id={team_id}&limit=20"
+            r = requests.get(url, headers=headers, timeout=10)
+            if r.status_code != 200:
+                HISTORICO_CACHE[cache_key] = None
+                return None
+        data = r.json()
+        results = data.get("results", [])
+        if not results:
+            HISTORICO_CACHE[cache_key] = None
+            return None
+        jogos = [j for j in results if j.get("home_score") is not None and j.get("away_score") is not None]
+        jogos = jogos[-10:]
+        if not jogos:
+            HISTORICO_CACHE[cache_key] = None
+            return None
+        total = len(jogos)
+        gols_ht = 0
+        total_gols = 0
+        ambas = 0
+        for j in jogos:
+            ht_h = int(j.get("home_score_ht", 0) or 0)
+            ht_a = int(j.get("away_score_ht", 0) or 0)
+            ft_h = int(j.get("home_score", 0) or 0)
+            ft_a = int(j.get("away_score", 0) or 0)
+            if ht_h + ht_a > 0:
+                gols_ht += 1
+            total_gols += ft_h + ft_a
+            if ft_h > 0 and ft_a > 0:
+                ambas += 1
+        result = {
+            "pct_ht": round(gols_ht / total * 100, 1),
+            "media_gols": round(total_gols / total, 1),
+            "pct_bt": round(ambas / total * 100, 1),
+            "total_parts": total,
+            "_fonte": "Bzzoiro"
+        }
+        print(f"[BZZ-HIST] {team_name} ({team_id}): {result}")
+        HISTORICO_CACHE[cache_key] = result
+        return result
+    except Exception as e:
+        print(f"[BZZ-HIST] {team_name} ({team_id}): {e}")
+        HISTORICO_CACHE[cache_key] = None
+        return None
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
+# LOOP PRINCIPAL
 # LOOP PRINCIPAL
 # ═══════════════════════════════════════════════════════════════════════════════
 def run():
@@ -2545,14 +2660,29 @@ def run():
             appm_valido = True
 
         # === FILTRO HISTÓRICO (média de gols dos times nos últimos 10 jogos) ===
-        hist_ok_ht = True    # usado em Over 0.5 HT e Limite HT
-        hist_ok_ft = True    # usado em BTTS, Over 1.5 FT e Over Gol Partida
+        hist_ok_ht = True
+        hist_ok_ft = True
         try:
             home_id = str(j.get("home_id", ""))
             away_id = str(j.get("away_id", ""))
+            source = j.get("source", "")
             if home_id and away_id and home_id != "None" and away_id != "None":
+                # Tenta apifootball primeiro (fonte principal)
                 hist_h = get_team_ht_stats(home_id, h)
                 hist_a = get_team_ht_stats(away_id, a)
+                # Fallback 1: ESPN
+                if not hist_h or not hist_a:
+                    if source == "espn":
+                        if not hist_h: hist_h = get_team_ht_stats_espn(home_id, h)
+                        if not hist_a: hist_a = get_team_ht_stats_espn(away_id, a)
+                    if not hist_h or not hist_a:
+                        if not hist_h: hist_h = get_team_ht_stats_bzzoiro(home_id, h)
+                        if not hist_a: hist_a = get_team_ht_stats_bzzoiro(away_id, a)
+                # Fallback 2: Bzzoiro
+                if not hist_h or not hist_a:
+                    if source == "bzzoiro":
+                        if not hist_h: hist_h = get_team_ht_stats_bzzoiro(home_id, h)
+                        if not hist_a: hist_a = get_team_ht_stats_bzzoiro(away_id, a)
                 if hist_h and hist_a:
                     pct_ht_h = hist_h.get("pct_ht", 0)
                     pct_ht_a = hist_a.get("pct_ht", 0)
