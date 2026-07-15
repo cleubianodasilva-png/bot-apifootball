@@ -2526,7 +2526,7 @@ def run():
                     appm_ht_ok = True
             
             print(f"[LIMITE-HT] {h} x {a} | odd_fav={odd_fav_num} | prob_15ft={prob_15_ft}% | prob_05ht={prob_05_ht}% | appm_casa={appm_casa} appm_fora={appm_fora}")
-            if (odd_fav_num <= 1.50 and prob_15_ft >= 75 and prob_05_ht >= 65 and appm_ht_ok and appm_valido):
+            if (odd_fav_num <= 1.50 and prob_15_ft >= 75 and prob_05_ht >= 65 and appm_ht_ok and appm_valido and hist_ok):
                 hoje = datetime.now(BRT).strftime('%Y%m%d')
                 key = f"{dedup_id}_limiteht_{hoje}"
                 if key not in sent:
