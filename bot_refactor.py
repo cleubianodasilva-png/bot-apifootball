@@ -2544,8 +2544,42 @@ def run():
         else:
             appm_valido = True
 
+        # === FILTRO HISTÓRICO (média de gols dos times nos últimos 10 jogos) ===
+        hist_ok_ht = True    # usado em Over 0.5 HT e Limite HT
+        hist_ok_ft = True    # usado em BTTS, Over 1.5 FT e Over Gol Partida
+        try:
+            home_id = str(j.get("home_id", ""))
+            away_id = str(j.get("away_id", ""))
+            if home_id and away_id and home_id != "None" and away_id != "None":
+                hist_h = get_team_ht_stats(home_id, h)
+                hist_a = get_team_ht_stats(away_id, a)
+                if hist_h and hist_a:
+                    pct_ht_h = hist_h.get("pct_ht", 0)
+                    pct_ht_a = hist_a.get("pct_ht", 0)
+                    media_h = hist_h.get("media_gols", 0)
+                    media_a = hist_a.get("media_gols", 0)
+                    media_combinada = (media_h + media_a) / 2
+                    pct_bt_h = hist_h.get("pct_bt", 0)
+                    pct_bt_a = hist_a.get("pct_bt", 0)
+                    pct_bt_media = (pct_bt_h + pct_bt_a) / 2
+                    print(f"[HIST] {h} x {a} | média_gols={media_combinada:.1f} | pct_ht: {pct_ht_h}%/{pct_ht_a}% | pct_bt: {pct_bt_h}%/{pct_bt_a}%")
+                    # HT: pelo menos um time com ≥ 40% de gols no 1º tempo nos últimos 10 jogos
+                    hist_ok_ht = (pct_ht_h >= 40 or pct_ht_a >= 40)
+                    # FT: média combinada ≥ 2.0 gols/jogo E média BTTS ≥ 25%
+                    hist_ok_ft = (media_combinada >= 2.0 and pct_bt_media >= 25)
+                    if not hist_ok_ht:
+                        print(f"[HIST-BLOQ-HT] {h} x {a} — pct_ht baixo ({pct_ht_h}%/{pct_ht_a}%), pulando mercados HT")
+                    if not hist_ok_ft:
+                        print(f"[HIST-BLOQ-FT] {h} x {a} — média {media_combinada:.1f}/BTTS {pct_bt_media:.0f}% abaixo do mínimo, pulando mercados FT")
+                else:
+                    print(f"[HIST] {h} x {a} — sem histórico disponível (times sem dados)")
+            else:
+                print(f"[HIST] {h} x {a} — sem IDs dos times (fonte: {j.get('source','?')})")
+        except Exception as e:
+            print(f"[HIST] {h} x {a} — erro no filtro histórico: {e}")
+
         # MERCADO 1: OVER 0.5 HT (10-26 min, 0x0, favorito empatando, sem vermelho do fav)
-        if p == 1 and 15 <= m <= 27 and sh == 0 and sa == 0 and fav_empatando and red_fav == 0 and appm_valido:
+        if p == 1 and 15 <= m <= 27 and sh == 0 and sa == 0 and fav_empatando and red_fav == 0 and appm_valido and hist_ok_ht:
             hoje = datetime.now(BRT).strftime('%Y%m%d')
             key = f"{dedup_id}_ht_{hoje}"
             if key not in sent:
@@ -2576,7 +2610,7 @@ def run():
                     appm_ht_ok = True
             
             print(f"[LIMITE-HT] {h} x {a} | odd_fav={odd_fav_num} | prob_15ft={prob_15_ft}% | prob_05ht={prob_05_ht}% | appm_casa={appm_casa} appm_fora={appm_fora}")
-            if (odd_fav_num <= 1.50 and prob_15_ft >= 75 and prob_05_ht >= 65 and appm_ht_ok and appm_valido):
+            if (odd_fav_num <= 1.50 and prob_15_ft >= 75 and prob_05_ht >= 65 and appm_ht_ok and appm_valido and hist_ok_ht):
                 hoje = datetime.now(BRT).strftime('%Y%m%d')
                 key = f"{dedup_id}_limiteht_{hoje}"
                 if key not in sent:
@@ -2587,7 +2621,7 @@ def run():
 
 
         # MERCADO 2: AMBAS MARCAM BTTS (55-75 min, fav perdendo por 1, sem vermelho do fav)
-        if p == 2 and 55 <= m <= 75 and ((sh == 1 and sa == 0) or (sh == 0 and sa == 1)) and fav_perdendo_1 and red_fav == 0 and appm_valido:
+        if p == 2 and 55 <= m <= 75 and ((sh == 1 and sa == 0) or (sh == 0 and sa == 1)) and fav_perdendo_1 and red_fav == 0 and appm_valido and hist_ok_ft:
             hoje = datetime.now(BRT).strftime('%Y%m%d')
             key = f"{dedup_id}_btts_{hoje}"
             if key not in sent:
@@ -2597,7 +2631,7 @@ def run():
                     registrar_sinal(fid, "BTTS", h, a, mid)
 
         # MERCADO 3: OVER 1.5 FT (55-75 min, fav empatando ou perdendo por 1, placares: 0x0/1x0/0x1/1x1, sem vermelho do fav)
-        if p == 2 and 55 <= m <= 75 and ((sh == 1 and sa == 0) or (sh == 0 and sa == 1)) and fav_perdendo_1 and red_fav == 0 and appm_valido:
+        if p == 2 and 55 <= m <= 75 and ((sh == 1 and sa == 0) or (sh == 0 and sa == 1)) and fav_perdendo_1 and red_fav == 0 and appm_valido and hist_ok_ft:
             hoje = datetime.now(BRT).strftime('%Y%m%d')
             key = f"{dedup_id}_oft_{hoje}"
             if key not in sent:
@@ -2608,7 +2642,7 @@ def run():
 
         # MERCADO 4: OVER GOL PARTIDA (55-75 min, placares 0x0/1x1/0x1/1x0, favorito empatando ou perdendo por 1)
         overgoal_valido = (fav_empatando or fav_perdendo_1)
-        if p == 2 and 55 <= m <= 75 and overgoal_valido and red_fav == 0 and appm_valido:
+        if p == 2 and 55 <= m <= 75 and overgoal_valido and red_fav == 0 and appm_valido and hist_ok_ft:
             hoje = datetime.now(BRT).strftime('%Y%m%d')
             key = f"{dedup_id}_overgoal_{hoje}"
             # Linha dinâmica: sempre acima do total de gols atual
