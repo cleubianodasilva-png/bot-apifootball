@@ -1872,7 +1872,7 @@ def gerar_motivo(mercado, stats, sh, sa, fav_final, minuto, cantos_atual=0):
         return f"Jogo bastante movimentado pelas laterais — {total_cantos} escanteios, {total_chutes} chutes{posse_txt}{vermelho}"
     return f"Jogo equilibrado, ambas criando chances — {chutes_h} chutes de Casa x {chutes_a} de Fora{posse_txt}{vermelho}"
 
-def msg_universal(home, away, minuto, liga, n, mercado, entrada, placar, extra_val=None, cantos_atual=0, stats=None, sh=0, sa=0, fav_final="h", odd_h=None, odd_a=None, odd_b365=None):
+def msg_universal(home, away, minuto, liga, n, mercado, entrada, placar, extra_val=None, cantos_atual=0, stats=None, sh=0, sa=0, fav_final="h", odd_h=None, odd_a=None, odd_b365=None, odd_bano=None):
     if "CORNER" in mercado or "ESCANTEIO" in mercado:
         linha = cantos_atual + 0.5
         entrada = f"Mais de {linha}🚩"
@@ -1937,9 +1937,11 @@ def msg_universal(home, away, minuto, liga, n, mercado, entrada, placar, extra_v
     # Substitui alerta antigo pela análise técnica completa com ataques perigosos
     alerta = gerar_motivo(mercado, stats, sh, sa, fav_final, minuto, cantos_atual)
 
-    # ODD real do mercado (Bet365)
+    # ODD real do mercado (Bet365, fallback Betano)
     if odd_b365:
         odd_rec = f"{odd_b365:.2f}"
+    elif odd_bano:
+        odd_rec = f"{odd_bano:.2f} (Betano)"
     else:
         odd_rec = "—"
 
@@ -2252,12 +2254,14 @@ def run():
             jogos_dedup.append(j)
         else:
             existente = vistos_jogos[chave]
-            # Se a duplicata é da ESPN (tem odds) e a existente NÃO é ESPN, substitui
-            if j.get("source") == "espn" and existente.get("source") != "espn":
+            # Se a duplicata NÃO é apifootball e a existente É apifootball, mantém apifootball (com odds)
+            if existente.get("source") == "apifootball":
+                print(f"[DEDUP] mantendo apifootball com odds: {existente['home']} x {existente['away']} (ignorando {j.get('source','?')})")
+            elif j.get("source") == "apifootball":
                 vistos_jogos[chave] = j
                 idx = jogos_dedup.index(existente)
                 jogos_dedup[idx] = j
-                print(f"[DEDUP] substituido {existente['home']} x {existente['away']} ({existente.get('source','?')}) -> {j.get('source','?')} (ESPN tem odds)")
+                print(f"[DEDUP] substituido {existente['home']} x {existente['away']} ({existente.get('source','?')}) -> apifootball (com odds)")
             else:
                 print(f"[DEDUP] ignorando duplicata de {j['home']} x {j['away']} ({j.get('source','?')})")
     print(f"[Dedup] {len(jogos_na_janela)} -> {len(jogos_dedup)} jogos unicos")
@@ -2468,7 +2472,7 @@ def run():
             if key not in sent:
                 ob365 = j.get("odds_b365", {}).get("o+0.5") if j.get("odds_b365") else None
                 obano = j.get("odds_bano", {}).get("o+0.5") if j.get("odds_bano") else None
-                mid = send_telegram(msg_universal(h, a, m, liga, 3, "HT", "Over 0.5", placar, stats=stats, sh=sh, sa=sa, fav_final=fav_final, odd_h=odd_h, odd_a=odd_a, odd_b365=ob365), marca=key, home=h, away=a, odd_b365_val=ob365, odd_bano_val=obano)
+                mid = send_telegram(msg_universal(h, a, m, liga, 3, "HT", "Over 0.5", placar, stats=stats, sh=sh, sa=sa, fav_final=fav_final, odd_h=odd_h, odd_a=odd_a, odd_b365=ob365, odd_bano=obano), marca=key, home=h, away=a, odd_b365_val=ob365, odd_bano_val=obano)
                 if mid:
                     sent.add(key); total_env += 1
                     registrar_sinal(fid, "HT", h, a, mid)
@@ -2501,7 +2505,7 @@ def run():
                 if key not in sent:
                     ob365 = j.get("odds_b365", {}).get("o+0.5") if j.get("odds_b365") else None
                     obano = j.get("odds_bano", {}).get("o+0.5") if j.get("odds_bano") else None
-                    mid = send_telegram(msg_universal(h, a, m, liga, 4, "LIMITEHT", "Over 0.5", placar, stats=stats, sh=sh, sa=sa, fav_final=fav_final, odd_h=odd_h, odd_a=odd_a, odd_b365=ob365), marca=key, home=h, away=a, odd_b365_val=ob365, odd_bano_val=obano)
+                    mid = send_telegram(msg_universal(h, a, m, liga, 4, "LIMITEHT", "Over 0.5", placar, stats=stats, sh=sh, sa=sa, fav_final=fav_final, odd_h=odd_h, odd_a=odd_a, odd_b365=ob365, odd_bano=obano), marca=key, home=h, away=a, odd_b365_val=ob365, odd_bano_val=obano)
                     if mid:
                         sent.add(key); total_env += 1
                         registrar_sinal(fid, "LIMITEHT", h, a, mid)
@@ -2513,7 +2517,7 @@ def run():
             if key not in sent:
                 ob365 = j.get("odds_b365", {}).get("bts_yes") if j.get("odds_b365") else None
                 obano = j.get("odds_bano", {}).get("bts_yes") if j.get("odds_bano") else None
-                mid = send_telegram(msg_universal(h, a, m, liga, 4, "BTTS", "Ambas Marcam", placar, stats=stats, sh=sh, sa=sa, fav_final=fav_final, odd_h=odd_h, odd_a=odd_a, odd_b365=ob365), marca=key, home=h, away=a, odd_b365_val=ob365, odd_bano_val=obano)
+                mid = send_telegram(msg_universal(h, a, m, liga, 4, "BTTS", "Ambas Marcam", placar, stats=stats, sh=sh, sa=sa, fav_final=fav_final, odd_h=odd_h, odd_a=odd_a, odd_b365=ob365, odd_bano=obano), marca=key, home=h, away=a, odd_b365_val=ob365, odd_bano_val=obano)
                 if mid:
                     sent.add(key); total_env += 1
                     registrar_sinal(fid, "BTTS", h, a, mid)
@@ -2525,7 +2529,7 @@ def run():
             if key not in sent:
                 ob365 = j.get("odds_b365", {}).get("o+1.5") if j.get("odds_b365") else None
                 obano = j.get("odds_bano", {}).get("o+1.5") if j.get("odds_bano") else None
-                mid = send_telegram(msg_universal(h, a, m, liga, 4, "OFT", "Over 1.5", placar, stats=stats, sh=sh, sa=sa, fav_final=fav_final, odd_h=odd_h, odd_a=odd_a, odd_b365=ob365), marca=key, home=h, away=a, odd_b365_val=ob365, odd_bano_val=obano)
+                mid = send_telegram(msg_universal(h, a, m, liga, 4, "OFT", "Over 1.5", placar, stats=stats, sh=sh, sa=sa, fav_final=fav_final, odd_h=odd_h, odd_a=odd_a, odd_b365=ob365, odd_bano=obano), marca=key, home=h, away=a, odd_b365_val=ob365, odd_bano_val=obano)
                 if mid:
                     sent.add(key); total_env += 1
                     registrar_sinal(fid, "OFT", h, a, mid)
@@ -2550,7 +2554,7 @@ def run():
             if key not in sent:
                 ob365 = j.get("odds_b365", {}).get("o+0.5") if j.get("odds_b365") else None
                 obano = j.get("odds_bano", {}).get("o+0.5") if j.get("odds_bano") else None
-                mid = send_telegram(msg_universal(h, a, m, liga, 4, "OVERGOAL", linha_over, placar, stats=stats, sh=sh, sa=sa, fav_final=fav_final, odd_h=odd_h, odd_a=odd_a, odd_b365=ob365), marca=key, home=h, away=a, odd_b365_val=ob365, odd_bano_val=obano)
+                mid = send_telegram(msg_universal(h, a, m, liga, 4, "OVERGOAL", linha_over, placar, stats=stats, sh=sh, sa=sa, fav_final=fav_final, odd_h=odd_h, odd_a=odd_a, odd_b365=ob365, odd_bano=obano), marca=key, home=h, away=a, odd_b365_val=ob365, odd_bano_val=obano)
                 if mid:
                     sent.add(key); total_env += 1
                     registrar_sinal(fid, "OVERGOAL", h, a, mid, extra_val=total_gols)
@@ -2567,7 +2571,7 @@ def run():
             elif key not in sent:
                 ob365_e = j.get("odds_b365", {}).get("o+0.5") if j.get("odds_b365") else None
                 obano_e = j.get("odds_bano", {}).get("o+0.5") if j.get("odds_bano") else None
-                mid = send_telegram(msg_universal(h, a, m, liga, 5, "CORNER_HT", "", placar, cantos_atual=cantos, stats=stats, sh=sh, sa=sa, fav_final=fav_final, odd_h=odd_h, odd_a=odd_a, odd_b365=ob365_e), marca=key, home=h, away=a, odd_b365_val=ob365_e, odd_bano_val=obano_e)
+                mid = send_telegram(msg_universal(h, a, m, liga, 5, "CORNER_HT", "", placar, cantos_atual=cantos, stats=stats, sh=sh, sa=sa, fav_final=fav_final, odd_h=odd_h, odd_a=odd_a, odd_b365=ob365_e, odd_bano=obano_e), marca=key, home=h, away=a, odd_b365_val=ob365_e, odd_bano_val=obano_e)
                 if mid:
                     sent.add(key); total_env += 1
                     registrar_sinal(fid, "CORNER_HT", h, a, mid, extra_val=cantos)
@@ -2587,7 +2591,7 @@ def run():
             elif key not in sent:
                 ob365_e = j.get("odds_b365", {}).get("o+0.5") if j.get("odds_b365") else None
                 obano_e = j.get("odds_bano", {}).get("o+0.5") if j.get("odds_bano") else None
-                mid = send_telegram(msg_universal(h, a, m, liga, 5, "CORNER_FT", "", placar, cantos_atual=cantos, stats=stats, sh=sh, sa=sa, fav_final=fav_final, odd_h=odd_h, odd_a=odd_a, odd_b365=ob365_e), marca=key, home=h, away=a, odd_b365_val=ob365_e, odd_bano_val=obano_e)
+                mid = send_telegram(msg_universal(h, a, m, liga, 5, "CORNER_FT", "", placar, cantos_atual=cantos, stats=stats, sh=sh, sa=sa, fav_final=fav_final, odd_h=odd_h, odd_a=odd_a, odd_b365=ob365_e, odd_bano=obano_e), marca=key, home=h, away=a, odd_b365_val=ob365_e, odd_bano_val=obano_e)
                 if mid:
                     sent.add(key); total_env += 1
                     registrar_sinal(fid, "CORNER_FT", h, a, mid, extra_val=cantos)
