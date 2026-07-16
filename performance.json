@@ -1,8 +1,8 @@
 {
   "CORNER_HT": {
     "green": 7,
-    "red": 0,
-    "total": 7
+    "red": 1,
+    "total": 8
   },
   "CORNER_FT": {
     "green": 2,
