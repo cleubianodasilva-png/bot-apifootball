@@ -2628,8 +2628,8 @@ def run():
                     sent.add(key); total_env += 1
                     registrar_sinal(fid, "OVERGOAL", h, a, mid, extra_val=total_gols)
 
-        # MERCADO 5: ESCANTEIO LIMITE HT (33-39 min, fav confirmado, empatando ou perdendo por 1, sem vermelho, APPM ≥ 1)
-        if p == 1 and 33 <= m <= 39 and (fav_empatando or fav_perdendo_1) and red_fav == 0 and appm_valido:
+        # MERCADO 5: ESCANTEIO LIMITE HT (32-38 min, fav confirmado, empatando ou perdendo por 1, sem vermelho, APPM ≥ 1)
+        if p == 1 and 32 <= m <= 38 and (fav_empatando or fav_perdendo_1) and red_fav == 0 and appm_valido:
             hoje = datetime.now(BRT).strftime('%Y%m%d')
             key = f"{dedup_id}_cht_{hoje}"
             cantos_h = stats.get("escanteios_h", -1) if stats else -1
@@ -2645,8 +2645,8 @@ def run():
                     sent.add(key); total_env += 1
                     registrar_sinal(fid, "CORNER_HT", h, a, mid, extra_val=cantos)
 
-        # MERCADO 6: ESCANTEIO LIMITE FT (83-89 min, fav confirmado, empatando ou perdendo por 1, sem vermelho)
-        if p == 2 and 83 <= m <= 89 and (fav_empatando or fav_perdendo_1) and red_fav == 0 and appm_valido:
+        # MERCADO 6: ESCANTEIO LIMITE FT (82-88 min, fav confirmado, empatando ou perdendo por 1, sem vermelho)
+        if p == 2 and 82 <= m <= 88 and (fav_empatando or fav_perdendo_1) and red_fav == 0 and appm_valido:
             hoje = datetime.now(BRT).strftime('%Y%m%d')
             key = f"{dedup_id}_cft_{hoje}"
             cantos_h = stats.get("escanteios_h", -1) if stats else -1
