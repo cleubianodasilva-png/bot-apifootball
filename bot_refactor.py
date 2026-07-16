@@ -2261,13 +2261,36 @@ def run():
         # Normaliza pra mesma chave entre APIs
         hn_j = re.sub(r'\b(RJ|SP|MG|RS|PR|SC|BA|PE|CE|GO|MT|MS|DF|ES|RN|PB|AL|SE|PI|MA|PA|AM|AC|RO|RR|AP|TO|FR|FC|AC|EC|SE|CF)\b', '', j["home"].lower()).strip()
         an_j = re.sub(r'\b(RJ|SP|MG|RS|PR|SC|BA|PE|CE|GO|MT|MS|DF|ES|RN|PB|AL|SE|PI|MA|PA|AM|AC|RO|RR|AP|TO|FR|FC|AC|EC|SE|CF)\b', '', j["away"].lower()).strip()
+        # Remove sufixos genéricos de nome de time (Riverhounds, United, City, etc.)
+        hn_j = re.sub(r'\b(riverhounds|united|city|juniors|athletic|atlético|nacional|wanderers|rover|rovers|dynamo|galaxy|sporting|real|inter|internacional|deportivo|racing|club|instituto)\b', '', hn_j).strip()
+        an_j = re.sub(r'\b(riverhounds|united|city|juniors|athletic|atlético|nacional|wanderers|rover|rovers|dynamo|galaxy|sporting|real|inter|internacional|deportivo|racing|club|instituto)\b', '', an_j).strip()
         chave = (hn_j, an_j)
-        if chave not in vistos_jogos:
+        # Também tenta substring match: se um time contém o nome do outro
+        chave_encontrada = None
+        for v_chave in vistos_jogos:
+            v_h, v_a = v_chave
+            h_match = hn_j in v_h or v_h in hn_j
+            a_match = an_j in v_a or v_a in an_j
+            if h_match and a_match:
+                chave_encontrada = v_chave
+                break
+        if chave_encontrada:
+            existente = vistos_jogos[chave_encontrada]
+            # Se a duplicata NÃO é apifootball e a existente É apifootball, mantém apifootball (com odds)
+            if existente.get("source") == "apifootball":
+                print(f"[DEDUP] mantendo apifootball com odds: {existente['home']} x {existente['away']} (ignorando {j.get('source','?')} - {j['home']} x {j['away']})")
+            elif j.get("source") == "apifootball":
+                vistos_jogos[chave_encontrada] = j
+                idx = jogos_dedup.index(existente)
+                jogos_dedup[idx] = j
+                print(f"[DEDUP] substituido {existente['home']} x {existente['away']} ({existente.get('source','?')}) -> apifootball (com odds)")
+            else:
+                print(f"[DEDUP] ignorando duplicata de {j['home']} x {j['away']} ({j.get('source','?')})")
+        elif chave not in vistos_jogos:
             vistos_jogos[chave] = j
             jogos_dedup.append(j)
         else:
             existente = vistos_jogos[chave]
-            # Se a duplicata NÃO é apifootball e a existente É apifootball, mantém apifootball (com odds)
             if existente.get("source") == "apifootball":
                 print(f"[DEDUP] mantendo apifootball com odds: {existente['home']} x {existente['away']} (ignorando {j.get('source','?')})")
             elif j.get("source") == "apifootball":
