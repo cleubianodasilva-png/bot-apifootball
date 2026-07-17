@@ -1978,11 +1978,11 @@ def msg_universal(home, away, minuto, liga, n, mercado, entrada, placar, extra_v
     # Pressão baseada exclusivamente no APPM da partida (total)
     if atq_perig_por_min >= 1.8:
         pressao = "Altíssima 🔥🔥"
-    elif atq_perig_por_min >= 1.2:
+    elif atq_perig_por_min >= 1.0:
         pressao = "Alta 🔥"
     elif atq_perig_por_min >= 0.7:
         pressao = "Moderada 💪"
-    elif atq_perig_por_min >= 0.3:
+    elif atq_perig_por_min >= 0.5:
         pressao = "Média ✅"
     else:
         pressao = "Baixa 👎"
