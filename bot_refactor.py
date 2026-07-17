@@ -715,7 +715,6 @@ def enviar_relatorio_diario():
 # ─── Performance por Mercado ────────────────────────────────────────────────────
 MAPA_MERCADO = {
     "HT": "🔥 Over 0.5 Gols HT",
-    "LIMITEHT": "🔥 Over Gol Limite HT",
     "BTTS": "⚽ BTTS",
     "OFT": "⚽ Over 1.5 FT",
     "OVERGOAL": "⚽ Over Gol FT",
@@ -1804,17 +1803,6 @@ def gerar_motivo(mercado, stats, sh, sa, fav_final, minuto, cantos_atual=0):
             return f"Ambas pressionando forte no 1º tempo — {total_atq_perig} atq. perigosos | Over HT{vermelho}"
         return f"Jogo movimentado no 1º tempo — {total_chutes} chutes, {total_atq_perig} ataques | Over HT{vermelho}"
 
-    if mercado == "LIMITEHT":
-        if jogo_aberto and total_chutes >= 8:
-            return f"Jogo aberto com {total_chutes} chutes e sem gols — gol pode sair no fim do 1º tempo{vermelho}"
-        if fav_perdendo and fav_chutes >= 6:
-            return f"{fav_label} perdendo e pressionando — {fav_chutes} chutes ({fav_gol} no alvo) | Limite HT{vermelho}"
-        if fav_amassando:
-            return f"{fav_label} amassando em busca do gol — {fav_atq} ataques perigosos | Limite HT{vermelho}"
-        if total_atq_perig >= 8:
-            return f"Alta pressão ofensiva — {total_atq_perig} ataques perigosos | Últimos minutos do HT{vermelho}"
-        return f"Pressão para gol antes do intervalo — {total_chutes} chutes em {minuto}'{vermelho}"
-
     if mercado == "BTTS":
         if chutes_gol_h >= 2 and chutes_gol_a >= 1:
             return f"Ambas com finalizações no alvo ({chutes_gol_h}x{chutes_gol_a}) — grande chance de ambos marcarem{vermelho}"
@@ -1922,12 +1910,11 @@ def msg_universal(home, away, minuto, liga, n, mercado, entrada, placar, extra_v
         entrada = f"Mais de {linha}🚩"
 
     # Adiciona ⚽ na entrada para mercados de gol
-    if mercado in ("HT", "LIMITEHT", "BTTS", "OFT", "OVERGOAL"):
+    if mercado in ("HT", "BTTS", "OFT", "OVERGOAL"):
         entrada = str(entrada).rstrip() + "⚽"
     
     titles = {
         "HT": "⚽️🔥OVER GOL INTERVALO🔥⚽️",
-        "LIMITEHT": "⚽️🔥OVER GOL LIMITE HT🔥⚽️",
         "BTTS": "⚽️🔥AMBAS MARCAM🔥⚽️",
         "OFT": "⚽️🔥OVER 1.5 GOLS PARTIDA🔥⚽️",
         "OVERGOAL": "⚽️🔥OVER GOL PARTIDA🔥⚽️",
@@ -2036,7 +2023,7 @@ def checar_resultado(sinal):
         is_final = (state == "post")
         is_2h    = (state == "in" and int(status.get("period", 0)) >= 2)
         
-        if not (is_final or (mercado in ["HT", "LIMITEHT", "CORNER_HT"] and is_2h)):
+        if not (is_final or (mercado in ["HT", "CORNER_HT"] and is_2h)):
             return None
 
         # Placar Final (ou atual se is_2h)
@@ -2058,7 +2045,7 @@ def checar_resultado(sinal):
         total_ht = gh_ht + ga_ht
 
         # Lógica por Mercado
-        if mercado in ["HT", "LIMITEHT"]:
+        if mercado in ["HT"]:
             return "green" if total_ht >= 1 else ("red" if (is_2h or is_final) else None)
         
         elif mercado == "BTTS":
@@ -2549,39 +2536,6 @@ def run():
                 if mid:
                     sent.add(key); total_env += 1
                     registrar_sinal(fid, "HT", h, a, mid)
-
-        # MERCADO 1B: OVER GOL LIMITE HT (15-27 min, 0x0, odd fav ≤ 1.80, prob 1.5 FT ≥ 60%, prob 0.5 HT ≥ 50%, APPM casa/fora ≥ 0.7)
-        if p == 1 and 15 <= m <= 27 and sh == 0 and sa == 0 and red_fav == 0:
-            odd_fav_num = get_odd_favorito_num(h, a, fid=fid, league=j.get("liga_slug", j.get("liga", "")))
-            
-            # APPM: ataques perigosos por minuto (casa OU fora ≥ 0.7)
-            appm_casa = _appm_h
-            appm_fora = _appm_a
-            appm_ht_ok = appm_casa >= 0.7 or appm_fora >= 0.7
-            
-            # Cálculo de probabilidades via chutes (se tiver)
-            chutes_tot_total = (stats.get("chutes_tot_h", 0) + stats.get("chutes_tot_a", 0)) if stats else 0
-            chutes_gol_total = (stats.get("chutes_gol_h", 0) + stats.get("chutes_gol_a", 0)) if stats else 0
-            prob_15_ft, prob_05_ht = calcular_prob_gols_ht(chutes_tot_total, chutes_gol_total, m)
-            
-            # Fallback: se não tem stats de chutes nem ataques, usa odd do favorito como proxy
-            if chutes_tot_total == 0 and odd_fav_num <= 1.80:
-                prob_15_ft = max(prob_15_ft, 65)
-                prob_05_ht = max(prob_05_ht, 55)
-                if not appm_ht_ok and _aph_val == 0 and _apa_val == 0:
-                    appm_ht_ok = True
-            
-            print(f"[LIMITE-HT] {h} x {a} | odd_fav={odd_fav_num} | prob_15ft={prob_15_ft}% | prob_05ht={prob_05_ht}% | appm_casa={appm_casa} appm_fora={appm_fora}")
-            if (odd_fav_num <= 1.80 and prob_15_ft >= 60 and prob_05_ht >= 50 and appm_ht_ok and appm_valido and hist_ok):
-                hoje = datetime.now(BRT).strftime('%Y%m%d')
-                key = f"{dedup_id}_limiteht_{hoje}"
-                if key not in sent:
-                    ob365 = j.get("odds_b365", {}).get("o+0.5") if j.get("odds_b365") else None
-                    obano = j.get("odds_bano", {}).get("o+0.5") if j.get("odds_bano") else None
-                    mid = send_telegram(msg_universal(h, a, m, liga, 4, "LIMITEHT", "Over 0.5", placar, stats=stats, sh=sh, sa=sa, fav_final=fav_final, odd_h=odd_h, odd_a=odd_a, odd_b365=ob365, odd_bano=obano), marca=key, home=h, away=a, odd_b365_val=ob365, odd_bano_val=obano)
-                    if mid:
-                        sent.add(key); total_env += 1
-                        registrar_sinal(fid, "LIMITEHT", h, a, mid)
 
         # MERCADO 2: AMBAS MARCAM BTTS (55-75 min, fav perdendo por 1, sem vermelho do fav, média hist ≥ 2.0)
         if p == 2 and 55 <= m <= 75 and ((sh == 1 and sa == 0) or (sh == 0 and sa == 1)) and fav_perdendo_1 and red_fav == 0 and appm_valido and hist_ok:
