@@ -2374,8 +2374,24 @@ def run():
             except: pass
 
         stats = {}
+        # PASSO 1: Escanteios — ESPN primeiro (mais precisa), apifootball cobre se ESPN falhar
+        for src_nome, src in [("ESPN", stats_espn), ("apifootball", stats_apif), ("Bzzoiro", stats_bzz)]:
+            for campo in ["escanteios_h", "escanteios_a"]:
+                if campo not in src:
+                    continue
+                val = src[campo]
+                if not isinstance(val, (int,float)) or val < 0:
+                    continue
+                current = stats.get(campo, -1)
+                if current == -1:
+                    stats[campo] = val
+                    stats["_fonte_"+campo] = src_nome
+                elif current == 0 and val > 0:
+                    stats[campo] = val
+                    stats["_fonte_"+campo] = src_nome
+        # PASSO 2: Demais campos — apifootball chefe, ESPN/Bzzoiro reservas
         for src_nome, src in [("apifootball", stats_apif), ("ESPN", stats_espn), ("Bzzoiro", stats_bzz)]:
-            for campo in ["chutes_tot_h","chutes_tot_a","chutes_gol_h","chutes_gol_a","escanteios_h","escanteios_a","red_cards_h","red_cards_a","posse_h","posse_a","ataques_h","ataques_a","ataques_perigosos_h","ataques_perigosos_a"]:
+            for campo in ["chutes_tot_h","chutes_tot_a","chutes_gol_h","chutes_gol_a","red_cards_h","red_cards_a","posse_h","posse_a","ataques_h","ataques_a","ataques_perigosos_h","ataques_perigosos_a"]:
                 if campo not in src:
                     continue
                 val = src[campo]
