@@ -2178,6 +2178,10 @@ def get_media_gols_historica(home_id, away_id):
 def run():
     # ─── ISOLAMENTO POR REPOSITÓRIO: cada bot usa SÓ sua fonte ───
     _repo_atual = os.environ.get("GITHUB_REPOSITORY", "").lower()
+    if "maquina-de-greens" in _repo_atual:
+        BOT_SOURCE = "espn"
+    else:
+        BOT_SOURCE = "apifootball"
 
     print(f"[Iniciando monitoramento — Fonte: {BOT_SOURCE.upper()} | Repo: {_repo_atual}]")
     sent      = load_sent()
