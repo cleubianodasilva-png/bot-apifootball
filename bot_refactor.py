@@ -1655,20 +1655,13 @@ def run():
         _appm_total = round(_apt_val / m, 2) if m > 0 else 0
         _appm_h = round(_aph_val / m, 2) if m > 0 else 0
         _appm_a = round(_apa_val / m, 2) if m > 0 else 0
-        # APPM seletiva por repositório
-        # maquina-de-greens-bot (Grupo GITHUB): APPM ativo
-        #   - OVER GOLS: casa ≥ 0.8 OU fora ≥ 0.8 OU total ≥ 1.5
-        #   - ESCANTEIOS: casa ≥ 0.7 OU fora ≥ 0.7 OU total ≥ 1.4
-        # boot-ia-inteligente-bot (Grupo ZAPIA): livre
-            appm_valido   = _appm_h >= 0.7 or _appm_a >= 0.7 or _appm_total >= 1.4  # escanteios
-            appm_gols_ok  = _appm_h >= 0.8 or _appm_a >= 0.8 or _appm_total >= 1.5  # over gols
-            if not appm_valido:
-                print(f"[APPM-BLOQUEADO] {h} x {a} — APPM casa={_appm_h} fora={_appm_a} total={_appm_total} (mín: 0.7/time ou 1.4 total)")
-            if not appm_gols_ok:
-                print(f"[APPM-GOLS-BLOQUEADO] {h} x {a} — APPM casa={_appm_h} fora={_appm_a} total={_appm_total} (mín: 0.8/time ou 1.5 total)")
-        else:
-            appm_valido   = True
-            appm_gols_ok  = True
+        # APPM — Filtro de ataques perigosos por minuto (anti-jogo morno)
+        appm_valido   = _appm_h >= 0.7 or _appm_a >= 0.7 or _appm_total >= 1.4  # escanteios
+        appm_gols_ok  = _appm_h >= 0.8 or _appm_a >= 0.8 or _appm_total >= 1.5  # over gols
+        if not appm_valido:
+            print(f"[APPM-BLOQUEADO] {h} x {a} — APPM casa={_appm_h} fora={_appm_a} total={_appm_total} (mín: 0.7/time ou 1.4 total)")
+        if not appm_gols_ok:
+            print(f"[APPM-GOLS-BLOQUEADO] {h} x {a} — APPM casa={_appm_h} fora={_appm_a} total={_appm_total} (mín: 0.8/time ou 1.5 total)")
 
         # HISTÓRICO — Média de gols por partida (jogo todo) ≥ 2.0
         # Req. para: Over Gol HT, Over Gol FT e BTTS
@@ -1972,8 +1965,7 @@ def processar_comandos_pendentes(token, chat_id, jogos_live=None, jogos_na_janel
                         liga = j.get("liga","")
                         # Usa minuto atualizado se disponível
                         m = minuto_map.get((h.lower(), a.lower()), j.get("minuto",""))
-                        linhas_jan += f"🎯 <b>{h} x {a}</b> | {m}' | {sh}x{sa} | {liga}
-"
+                        linhas_jan += f"🎯 <b>{h} x {a}</b> | {m}' | {sh}x{sa} | {liga}\n"
                     if not linhas_jan:
                         linhas_jan = "Nenhum jogo na janela no momento."
                     fora = [j for j in jogos_live if j not in jogos_na_janela][:10]
@@ -1983,28 +1975,18 @@ def processar_comandos_pendentes(token, chat_id, jogos_live=None, jogos_na_janel
                         sh = j.get("sh",0); sa = j.get("sa",0)
                         # Usa minuto atualizado se disponível
                         m = minuto_map.get((h.lower(), a.lower()), j.get("minuto",""))
-                        linhas_fora += f"⏳ {h} x {a} | {m}' | {sh}x{sa}
-"
+                        linhas_fora += f"⏳ {h} x {a} | {m}' | {sh}x{sa}\n"
                     if not linhas_fora: linhas_fora = "—"
                     msg_radar = (
-                        f"{sep}
-"
-                        f"📡👉<b>RADAR DE JOGOS AO VIVO</b>👇📡
-"
-                        f"{sep}
-"
-                        f"🔴 <b>{len(jogos_live)} jogos ao vivo</b>
-"
-                        f"🎯 <b>{len(jogos_na_janela)} na janela alvo</b>
-"
-                        f"{sep}
-"
-                        f"🚨<b>JOGOS NO ALVO:</b>
-{linhas_jan}"
-                        f"{sep}
-"
-                        f"<b>⏳ FORA DA JANELA:</b>
-{linhas_fora}"
+                        f"{sep}\n"
+                        f"📡👉<b>RADAR DE JOGOS AO VIVO</b>👇📡\n"
+                        f"{sep}\n"
+                        f"🔴 <b>{len(jogos_live)} jogos ao vivo</b>\n"
+                        f"🎯 <b>{len(jogos_na_janela)} na janela alvo</b>\n"
+                        f"{sep}\n"
+                        f"🚨<b>JOGOS NO ALVO:</b>\n{linhas_jan}"
+                        f"{sep}\n"
+                        f"<b>⏳ FORA DA JANELA:</b>\n{linhas_fora}"
                         f"{sep}"
                     )
                     requests.post(f"https://api.telegram.org/bot{token}/sendMessage",
