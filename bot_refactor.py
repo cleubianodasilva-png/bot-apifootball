@@ -1695,6 +1695,55 @@ def check_status_command(total_jogos_live=0, jogos_live=None, jogos_na_janela=No
                 except Exception as e:
                     print(f"[PERFORMANCE] Erro: {e}")
                 relatorio_respondido = True
+            elif "/vip" in text:
+                requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
+                              json={"chat_id": chat_orig, "text": VIP_PROMO, "parse_mode": "HTML", "disable_web_page_preview": True})
+                print(f"[VIP] Divulgação enviada para {chat_orig}")
+            elif "/assinar" in text:
+                try:
+                    user_info = msg.get("from", {})
+                    user_id = str(user_info.get("id", chat_orig))
+                    first = user_info.get("first_name", "")
+                    last = user_info.get("last_name", "")
+                    nome = f"{first} {last}".strip() or "Cliente"
+                    # Gera Pix via vip_manager
+                    import subprocess, sys
+                    result = subprocess.run(
+                        [sys.executable, "vip_manager.py", "pix", "--telegram", user_id, "--nome", nome],
+                        capture_output=True, text=True, timeout=30
+                    )
+                    output = result.stdout + result.stderr
+                    if "✅" in output and "payload" in output.lower():
+                        lines = output.split("\n")
+                        pix_code = ""
+                        for line in lines:
+                            if "Pix Copia e Cola" in line or "payload" in line.lower():
+                                pix_code = line.split(":", 1)[-1].strip() if ":" in line else ""
+                            elif "000201" in line:
+                                pix_code = line.strip()
+                        msg_vip = (
+                            f"🎉 <b>Pix gerado com sucesso!</b>\n\n"
+                            f"Olá <b>{nome}</b>, sua assinatura <b>Máquina de Greens VIP</b>\n"
+                            f"está quase pronta!\n\n"
+                            f"💰 <b>Valor: R$ 50,00</b>\n"
+                            f"📅 <b>Validade:</b> 30 dias após confirmação\n\n"
+                            f"👇 <b>PIX COPIA E COLA:</b>\n"
+                            f"<code>{pix_code}</code>\n\n"
+                            f"📱 <b>Ou pague pelo QR Code:</b>\n"
+                            f"Basta abrir o app do seu banco, escanear e pagar!\n\n"
+                            f"✅ Após a confirmação, você receberá o link do grupo VIP automaticamente!"
+                        )
+                        requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
+                                      json={"chat_id": chat_orig, "text": msg_vip, "parse_mode": "HTML"})
+                        print(f"[VIP] Pix gerado para {nome} ({user_id})")
+                    else:
+                        requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
+                                      json={"chat_id": chat_orig, "text": "❌ Erro ao gerar Pix. Tente novamente mais tarde ou contate o suporte.", "parse_mode": "HTML"})
+                        print(f"[VIP] Erro gerando Pix para {nome}: {output[:200]}")
+                except Exception as e:
+                    print(f"[VIP-ASSINAR] Erro: {e}")
+                    requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
+                                  json={"chat_id": chat_orig, "text": "❌ Erro ao processar. Tente /assinar novamente.", "parse_mode": "HTML"})
             elif ("/radar" in text or text.startswith("/radar@")) and not radar_respondido:
                 jogos_live = jogos_live or []
                 jogos_na_janela = jogos_na_janela or []
@@ -1849,11 +1898,6 @@ def run():
     if not jogos_na_janela:
         print("[OK] Nenhum jogo na janela — aguardando próximo ciclo")
         save_sent(sent)
-        # Processa comandos (/assinar, /radar, etc) mesmo sem jogos
-        try:
-            processar_comandos_pendentes(TG_TOKEN, CHAT_ID, jogos_live, jogos_na_janela)
-        except Exception as e:
-            print(f"[CMD] Erro processando comandos: {e}")
         print("Finalizado. Enviados: 0")
         return
 
@@ -2257,16 +2301,7 @@ def run():
     except Exception as e:
         print(f"[SINAIS] Erro validação: {e}")
 
-    # Processa comandos pendentes com dados reais
-    try:
-        processar_comandos_pendentes(TG_TOKEN, CHAT_ID, jogos_live, jogos_na_janela)
-    except Exception as e:
-        print(f"[CMD] Erro chamando comandos: {e}")
-    # Processa comandos pendentes com dados reais
-    try:
-        processar_comandos_pendentes(TG_TOKEN, CHAT_ID, jogos_live, jogos_na_janela)
-    except Exception as e:
-        print(f"[CMD] Erro chamando comandos: {e}")
+    # (Comandos processados via check_status_command com offset)
     # ═══════════════════════════════════════════════════════════════════════════
     # AUTO-DISPATCH: /relatoriodiario + /mercados24h às 23:55
     # ═══════════════════════════════════════════════════════════════════════════
