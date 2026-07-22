@@ -2364,6 +2364,56 @@ def processar_comandos_pendentes(token, chat_id, jogos_live=None, jogos_na_janel
                                           json={"chat_id": chat_orig, "text": "Ainda sem dados de performance registrados.", "parse_mode": "HTML"})
                     except Exception as e:
                         print(f"[PERFORMANCE] Erro: {e}")
+                elif "/vip" in text:
+                    enviar(chat_orig, VIP_PROMO)
+                    print(f"[VIP] Divulgação enviada para {chat_orig}")
+                elif "/assinar" in text:
+                    try:
+                        user_info = msg.get("from", {})
+                        user_id = str(user_info.get("id", chat_orig))
+                        first = user_info.get("first_name", "")
+                        last = user_info.get("last_name", "")
+                        nome = f"{first} {last}".strip() or "Cliente"
+                        
+                        # Gera Pix via vip_manager
+                        import subprocess, sys
+                        result = subprocess.run(
+                            [sys.executable, "vip_manager.py", "pix", "--telegram", user_id, "--nome", nome],
+                            capture_output=True, text=True, timeout=30
+                        )
+                        output = result.stdout + result.stderr
+                        
+                        if "✅" in output and "payload" in output.lower():
+                            # Extrai o Pix copia e cola
+                            lines = output.split("\n")
+                            pix_code = ""
+                            for line in lines:
+                                if "Pix Copia e Cola" in line or "payload" in line.lower():
+                                    pix_code = line.split(":", 1)[-1].strip() if ":" in line else ""
+                                elif "000201" in line:
+                                    pix_code = line.strip()
+                            
+                            msg_vip = (
+                                f"🎉 <b>Pix gerado com sucesso!</b>\n\n"
+                                f"Olá <b>{nome}</b>, sua assinatura <b>Máquina de Greens VIP</b>\n"
+                                f"está quase pronta!\n\n"
+                                f"💰 <b>Valor: R$ 50,00</b>\n"
+                                f"📅 <b>Validade:</b> 30 dias após confirmação\n\n"
+                                f"👇 <b>PIX COPIA E COLA:</b>\n"
+                                f"<code>{pix_code}</code>\n\n"
+                                f"📱 <b>Ou pague pelo QR Code:</b>\n"
+                                f"Basta abrir o app do seu banco, escanear e pagar!\n\n"
+                                f"✅ Após a confirmação, você receberá o link do grupo VIP automaticamente!"
+                            )
+                            enviar(chat_orig, msg_vip)
+                            print(f"[VIP] Pix gerado para {nome} ({user_id})")
+                        else:
+                            enviar(chat_orig, 
+                                f"❌ Erro ao gerar Pix. Tente novamente mais tarde ou contate o suporte.")
+                            print(f"[VIP] Erro gerando Pix para {nome}: {output[:200]}")
+                    except Exception as e:
+                        print(f"[VIP-ASSINAR] Erro: {e}")
+                        enviar(chat_orig, "❌ Erro ao processar. Tente /assinar novamente.")
         if max_id > 0:
             try:
                 off = max_id
@@ -2371,6 +2421,24 @@ def processar_comandos_pendentes(token, chat_id, jogos_live=None, jogos_na_janel
             except: pass
     except Exception as e:
         print(f"[CMD] Erro processar comandos: {e}")
+
+# ========== TEXTO VIP ==========
+VIP_PROMO = (
+    f"━━━━━━━━━━━━━━━━━━━━\n"
+    f"<b>🚀 MÁQUINA DE GREENS VIP</b>\n"
+    f"━━━━━━━━━━━━━━━━━━━━\n\n"
+    f"🔥 <b>SINAIS AO VIVO COM ALTA ASSERTIVIDADE</b>\n\n"
+    f"📊 <b>6 MERCADOS:</b>\n"
+    f"⚽️ Over Gol Intervalo\n"
+    f"⚽️ Over Gol Partida\n"
+    f"⚽️ Over 1.5 Gols Partida\n"
+    f"⚽️ Ambas Marcam\n"
+    f"🚩 Escanteio Limite HT\n"
+    f"🚩 Escanteio Limite FT\n\n"
+    f"💰 <b>Investimento: R$ 50,00/mês</b>\n"
+    f"💳 Pagamento via <b>PIX</b> (entrada automática)\n\n"
+    f"📩 Envie <b>/assinar</b> no direct do bot para garantir sua vaga!"
+)
 
 # ========== VIP MANAGER ==========
 def run_vip():
