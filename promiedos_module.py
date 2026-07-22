@@ -378,3 +378,68 @@ def checar_resultado_promiedos(sinal):
     except Exception as e:
         print(f"[PROMIEDOS AUDIT ERRO] {e}")
         return None
+
+# ─── Bzzoiro: ataques perigosos direto da fonte ───
+BZZOIRO_BASE = "https://sports.bzzoiro.com"
+BZZOIRO_TOKEN = "a6b76b2ca04a56cbf4f1339acbc3597724d2e590"
+BZZOIRO_HEADERS = {"Authorization": f"Token {BZZOIRO_TOKEN}", "User-Agent": "Mozilla/5.0"}
+
+_CACHE_BZZ = {}
+_CACHE_BZZ_TTL = 20
+
+def get_ataques_perigosos_bzzoiro(home_team, away_team):
+    """
+    Busca ATAQUES PERIGOSOS direto da API do Bzzoiro (sem cálculo).
+    Retorna dict com ataques_perigosos_h e ataques_perigosos_a ou None.
+    """
+    cache_key = f"bzz_{home_team}_{away_team}".lower().replace(' ', '')
+    cached = _CACHE_BZZ.get(cache_key)
+    if cached and time.time() - cached[1] < _CACHE_BZZ_TTL:
+        return cached[0]
+
+    try:
+        # Busca eventos ao vivo
+        r = requests.get(f"{BZZOIRO_BASE}/api/v2/events/live/", headers=BZZOIRO_HEADERS, timeout=8)
+        if r.status_code != 200:
+            return None
+        data = r.json()
+        events = data.get("events", data.get("results", []))
+
+        # Normaliza nomes para comparar
+        h_norm = norm_nome_time(home_team)
+        a_norm = norm_nome_time(away_team)
+
+        match_id = None
+        for ev in events:
+            ev_h = norm_nome_time(ev.get("home_team", ev.get("home", {}).get("name", "")))
+            ev_a = norm_nome_time(ev.get("away_team", ev.get("away", {}).get("name", "")))
+            if (h_norm == ev_h and a_norm == ev_a) or (h_norm == ev_a and a_norm == ev_h):
+                match_id = ev.get("id", ev.get("event_id"))
+                break
+
+        if not match_id:
+            return None
+
+        # Busca stats do evento
+        r2 = requests.get(f"{BZZOIRO_BASE}/api/v2/events/{match_id}/stats/", headers=BZZOIRO_HEADERS, timeout=8)
+        if r2.status_code != 200:
+            return None
+        stats_data = r2.json()
+        stats = stats_data.get("stats", {})
+
+        home_danger = stats.get("home", {}).get("dangerous_attack", 0)
+        away_danger = stats.get("away", {}).get("dangerous_attack", 0)
+
+        if home_danger > 0 or away_danger > 0:
+            result = {
+                "ataques_perigosos_h": home_danger,
+                "ataques_perigosos_a": away_danger
+            }
+            _CACHE_BZZ[cache_key] = (result, time.time())
+            print(f"[BZZOIRO-DIRETO] Ataques Perigosos: {home_danger} | {away_danger}")
+            return result
+
+        return None
+    except Exception as e:
+        print(f"[BZZOIRO-ERRO] {e}")
+        return None
