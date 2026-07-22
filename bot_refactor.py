@@ -907,6 +907,248 @@ def get_favorito_odds(home, away, fid=None, league=None):
     return (None, None, None)
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# API ESPN — Jogos ao Vivo (FONTE PRINCIPAL)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+ESPN_SLUGS_PATH = os.path.join(BASE_DIR, "slugs_espn_completos.json")
+
+def american_to_decimal(american_odds):
+    """Converte odds americanas (+/-) para decimais."""
+    if american_odds is None:
+        return None
+    try:
+        ao = float(american_odds)
+        if ao > 0:
+            return round(ao / 100 + 1, 2)
+        else:
+            return round(100 / abs(ao) + 1, 2)
+    except:
+        return None
+
+def get_jogos_espn(fids_existentes):
+    """Busca jogos ao vivo de TODAS as ligas via ESPN — fonte principal."""
+    jogos = []
+    if not os.path.exists(ESPN_SLUGS_PATH):
+        print("[ESPN] slugs_espn_completos.json não encontrado!")
+        return []
+    try:
+        with open(ESPN_SLUGS_PATH) as f:
+            slugs = json.load(f)
+    except:
+        print("[ESPN] Erro ao ler slugs_espn_completos.json")
+        return []
+
+    print(f"[ESPN] Varrendo {len(slugs)} ligas...")
+    ligas_prioritarias = {"bra.1", "bra.2", "eng.1", "esp.1", "ita.1", "ger.1", "fra.1",
+                          "conmebol.libertadores", "conmebol.sudamericana", "uefa.champions",
+                          "uefa.europa", "arg.1", "por.1", "ned.1", "mex.1", "usa.1"}
+    slugs_ordenadas = sorted(slugs, key=lambda s: (0 if s in ligas_prioritarias else 1, s))
+    
+    for league_slug in slugs_ordenadas:
+        try:
+            url = f"https://site.api.espn.com/apis/site/v2/sports/soccer/{league_slug}/scoreboard"
+            r = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=5)
+            if r.status_code != 200:
+                continue
+            data = r.json()
+            events = data.get("events", [])
+            if not events:
+                continue
+
+            for ev in events:
+                comp = ev.get("competitions", [{}])[0]
+                st = comp.get("status", {}).get("type", {})
+
+                # Só jogos AO VIVO
+                if st.get("state") != "in":
+                    continue
+
+                comps = comp.get("competitors", [])
+                home = away = None
+                home_score = away_score = 0
+                for c in comps:
+                    if c.get("homeAway") == "home":
+                        home = c.get("team", {}).get("displayName", "")
+                        home_score = int(c.get("score", "0") or 0)
+                    else:
+                        away = c.get("team", {}).get("displayName", "")
+                        away_score = int(c.get("score", "0") or 0)
+
+                if not home or not away:
+                    continue
+
+                dc = comp.get("status", {}).get("displayClock", "0'")
+                period = comp.get("status", {}).get("period", 1)
+                try:
+                    minuto = int(dc.replace("'", "").replace("+", ""))
+                except:
+                    minuto = 0
+
+                liga = comp.get("altGameNote", "") or ev.get("league", {}).get("name", "") or league_slug
+
+                # Odds do scoreboard — parse das odds americanas
+                odd_h = odd_a = None
+                odds_b365 = {}
+                odds_bano = {}
+
+                odds_list = comp.get("odds") or []
+                for odd_entry in odds_list:
+                    details = odd_entry.get("details", "")
+                    ou = odd_entry.get("overUnder")
+                    is_dk = "draftkings" in (odd_entry.get("provider", {}).get("name", "")).lower()
+                    
+                    if details:
+                        parts = details.split()
+                        if len(parts) >= 2:
+                            try:
+                                odd_americana = float(parts[-1].replace(",", ""))
+                                odd_val = american_to_decimal(odd_americana)
+                                team_abbr = parts[0].upper()
+                                for c in comps:
+                                    tabbr = c.get("team", {}).get("abbreviation", "").upper()
+                                    if tabbr == team_abbr:
+                                        if c.get("homeAway") == "home":
+                                            odd_h = odd_val
+                                        else:
+                                            odd_a = odd_val
+                                        break
+                                if odd_h is None and odd_a is None:
+                                    odd_h = odd_val
+                            except:
+                                pass
+                    
+                    if is_dk and ou:
+                        over_odds = american_to_decimal(odd_entry.get("overOdds"))
+                        if over_odds:
+                            for k in ["o+0.5","o+1.5","o+2.5"]:
+                                odds_b365[k] = over_odds
+                                odds_bano[k] = over_odds
+                        break
+                
+                # Fallback odd da outra mão se só veio uma (margem bookmaker ~6%)
+                if odd_h and not odd_a:
+                    ip_h = 1.0 / odd_h
+                    remaining = 0.94 - ip_h  # 6% overround
+                    odds_a = round(1.0 / max(remaining * 0.5, 0.05), 2)
+                    if odds_a < 1.5: odds_a = 2.0  # sanity
+                    odd_a = odds_a
+                if odd_a and not odd_h:
+                    ip_a = 1.0 / odd_a
+                    remaining = 0.94 - ip_a
+                    odds_h = round(1.0 / max(remaining * 0.5, 0.05), 2)
+                    if odds_h < 1.5: odds_h = 2.0
+                    odd_h = odds_h
+
+                fid_raw = comp.get("id", "")
+                fid = f"espn_{fid_raw}"
+
+                jogos.append({
+                    "fid": fid, "fid_raw": fid_raw,
+                    "home": home, "away": away,
+                    "sh": home_score, "sa": away_score,
+                    "minuto": minuto, "liga": liga, "period": period,
+                    "source": "espn", "league_slug": league_slug,
+                    "home_id": f"espn_{comp.get('uid','')}",
+                    "away_id": f"espn_{comp.get('uid','')}",
+                    "odd_h": odd_h, "odd_a": odd_a,
+                    "odds_b365": odds_b365, "odds_bano": odds_bano
+                })
+        except:
+            continue
+
+    print(f"[ESPN] {len(jogos)} jogos ao vivo encontrados")
+    return jogos
+
+def get_stats_espn(fid_raw, league_slug):
+    """Busca estatísticas detalhadas de uma partida via ESPN summary."""
+    stats = {}
+    try:
+        url = f"https://site.api.espn.com/apis/site/v2/sports/soccer/{league_slug}/summary?event={fid_raw}"
+        r = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=8)
+        if r.status_code != 200:
+            return stats
+
+        data = r.json()
+        bs = data.get("boxscore", {})
+        teams = bs.get("teams", [])
+
+        if len(teams) < 2:
+            return stats
+
+        # teams[0] = casa, teams[1] = fora
+        home_stats = {}
+        away_stats = {}
+        for s in teams[0].get("statistics", []):
+            label = s.get("label", "").lower()
+            totals = s.get("totals", [])
+            if totals and len(totals) > 0:
+                try:
+                    home_stats[label] = float(totals[0])
+                except:
+                    home_stats[label] = 0
+        for s in teams[1].get("statistics", []):
+            label = s.get("label", "").lower()
+            totals = s.get("totals", [])
+            if totals and len(totals) > 0:
+                try:
+                    away_stats[label] = float(totals[0])
+                except:
+                    away_stats[label] = 0
+
+        # Mapear para o formato do bot
+        stats["chutes_tot_h"] = int(home_stats.get("shots", 0))
+        stats["chutes_tot_a"] = int(away_stats.get("shots", 0))
+        stats["chutes_gol_h"] = int(home_stats.get("on goal", 0))
+        stats["chutes_gol_a"] = int(away_stats.get("on goal", 0))
+        stats["escanteios_h"] = int(home_stats.get("corner kicks", 0))
+        stats["escanteios_a"] = int(away_stats.get("corner kicks", 0))
+        stats["posse_h"] = home_stats.get("possession", 0)
+        stats["posse_a"] = away_stats.get("possession", 0)
+        stats["yellow_cards_h"] = int(home_stats.get("yellow cards", 0))
+        stats["yellow_cards_a"] = int(away_stats.get("yellow cards", 0))
+        stats["red_cards_h"] = int(home_stats.get("red cards", 0))
+        stats["red_cards_a"] = int(away_stats.get("red cards", 0))
+        stats["ataques_perigosos_h"] = int(home_stats.get("shots", 0) + home_stats.get("on goal", 0))
+        stats["ataques_perigosos_a"] = int(away_stats.get("shots", 0) + away_stats.get("on goal", 0))
+        stats["faltas_h"] = int(home_stats.get("fouls", 0))
+        stats["faltas_a"] = int(away_stats.get("fouls", 0))
+
+        # Odds do pickcenter (homeTeamOdds/awayTeamOdds)
+        pc = data.get("pickcenter", [])
+        for p in pc:
+            prov = p.get("provider", {}).get("name", "").lower()
+            if "draftkings" in prov:
+                # homeTeamOdds / awayTeamOdds têm os moneyLine
+                hto = p.get("homeTeamOdds") or {}
+                ato = p.get("awayTeamOdds") or {}
+                stats["odd_h"] = american_to_decimal(hto.get("moneyLine"))
+                stats["odd_a"] = american_to_decimal(ato.get("moneyLine"))
+                stats["odd_empate"] = american_to_decimal(p.get("drawMoneyLine"))
+                stats["over_under"] = p.get("overUnder")
+                stats["over_odds"] = american_to_decimal(p.get("overOdds"))
+                stats["under_odds"] = american_to_decimal(p.get("underOdds"))
+                # Fallback: parse do details se não veio ML
+                if not stats.get("odd_h") and not stats.get("odd_a"):
+                    details = p.get("details", "")
+                    if details and " -" in details:
+                        parts = details.split()
+                        if len(parts) >= 2:
+                            try:
+                                am = float(parts[-1].replace(",", ""))
+                                dec = american_to_decimal(am)
+                                stats["odd_h"] = dec
+                                stats["odd_a"] = round(1.0 / (0.94 - 1.0/dec), 2) if dec > 1 else 2.0
+                            except:
+                                pass
+                break
+
+        print(f"[ESPN-STATS] chutes: {stats.get('chutes_tot_h',0)}/{stats.get('chutes_tot_a',0)} | cantos: {stats.get('escanteios_h',0)}/{stats.get('escanteios_a',0)}")
+        return stats
+    except Exception as e:
+        print(f"[ESPN-STATS ERRO] {e}")
+        return stats
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # FILTRO DE JANELAS
 # ═══════════════════════════════════════════════════════════════════════════════
 def get_odd_favorito_num(home, away, fid=None, league=None, fid_raw=None):
@@ -1563,20 +1805,41 @@ def get_media_gols_historica(home_id, away_id):
 # LOOP PRINCIPAL
 # ═══════════════════════════════════════════════════════════════════════════════
 def run():
-    # ─── FONTE: apifootball (única fonte deste bot) ───
-    BOT_SOURCE = "apifootball"
-    print(f"[Iniciando monitoramento — Fonte: APIFOOTBALL]")
+    # ─── FONTE PRINCIPAL: ESPN | fallback: apifootball ───
+    BOT_SOURCE = "espn"
+    print(f"[Iniciando monitoramento — Fonte: ESPN (principal) + apifootball (fallback)]")
     sent      = load_sent()
     total_env = 0
     janela_id = datetime.now(BRT).strftime('%Y%m%d%H')
 
     # ─────────────────────────────────────────────────────────────
-    # PASSO 1: Coleta APENAS da fonte designada do bot
+    # PASSO 1: Coleta — ESPN como principal, apifootball como fallback
     # ─────────────────────────────────────────────────────────────
     jogos_live = []
-    if BOT_SOURCE == "apifootball":
-        jogos_live = get_jogos_apifootball_v3(set())
-        print(f"[apifootball] {len(jogos_live)} jogos ao vivo")
+    if BOT_SOURCE == "espn":
+        jogos_espn = get_jogos_espn(set())
+        print(f"[ESPN] {len(jogos_espn)} jogos ao vivo")
+        jogos_live.extend(jogos_espn)
+        # Fallback: apifootball complementa
+        try:
+            jogos_api = get_jogos_apifootball_v3(set())
+            if jogos_api:
+                print(f"[APIF-FALLBACK] {len(jogos_api)} jogos adicionais da apifootball")
+                # Dedup contra ESPN
+                nomes_espn = set()
+                for j in jogos_espn:
+                    hn = norm_nome_time(j["home"])
+                    an = norm_nome_time(j["away"])
+                    nomes_espn.add(hashlib.md5(f"{hn}-{an}".encode()).hexdigest()[:16])
+                for j in jogos_api:
+                    hn = norm_nome_time(j["home"])
+                    an = norm_nome_time(j["away"])
+                    chave = hashlib.md5(f"{hn}-{an}".encode()).hexdigest()[:16]
+                    if chave not in nomes_espn:
+                        jogos_live.append(j)
+                        print(f"[APIF-FALLBACK] Adicionado: {j['home']} x {j['away']} (não estava na ESPN)")
+        except Exception as e:
+            print(f"[APIF-FALLBACK ERRO] {e}")
     # PASSO 2: Filtra janelas alvo
     jogos_na_janela = filtrar_janelas(jogos_live)
     print(f"[Janela] {len(jogos_na_janela)} jogos nas janelas alvo")
@@ -1616,14 +1879,26 @@ def run():
 
         print(f"[Analisando] {h} x {a} | {placar} | {m}min")
 
-        # ─── Stats da fonte designada apenas (sem fusão entre APIs) ───
+        # ─── Stats: ESPN principal, depois apifootball fallback ───
         fid_raw = j.get("fid_raw", fid)
         stats = {}
-        if BOT_SOURCE == "apifootball":
-            try:
-                sa_api = get_stats_apifootball_live(fid_raw)
-                if isinstance(sa_api, dict) and sa_api: stats = sa_api
-            except: pass
+        if BOT_SOURCE == "espn":
+            # ESPN: busca stats via summary
+            if not stats or not (stats.get("escanteios_h", -1) >= 0 and stats.get("escanteios_a", -1) >= 0):
+                try:
+                    league_slug = j.get("league_slug", "")
+                    sa_espn = get_stats_espn(fid_raw, league_slug)
+                    if isinstance(sa_espn, dict) and sa_espn.get("escanteios_h", -1) >= 0:
+                        stats = sa_espn
+                        print(f"[ESPN-STATS-DETAIL] Stats detalhadas OK: esc {stats.get('escanteios_h')}x{stats.get('escanteios_a')}")
+                except Exception as e:
+                    print(f"[ESPN-STATS-DETAIL ERRO] {e}")
+            # Fallback: apifootball stats
+            if not stats or not (stats.get("escanteios_h", -1) >= 0 and stats.get("escanteios_a", -1) >= 0):
+                try:
+                    sa_api = get_stats_apifootball_live(fid_raw)
+                    if isinstance(sa_api, dict) and sa_api: stats = sa_api
+                except: pass
             if not stats or not (stats.get("escanteios_h", -1) >= 0 and stats.get("escanteios_a", -1) >= 0):
                 try:
                     sa3 = get_stats_apifootball_v3(fid_raw)
@@ -1661,16 +1936,27 @@ def run():
             print(f"[SKIP] {h} x {a} — sem stats reais (chutes, cantos ou ataques perigosos) em nenhuma API, pulando jogo")
             continue
 
-        # Favorito: odds da própria fonte (cada bot só usa sua API)
+        # Favorito: odds da ESPN (principal) ou apifootball (fallback)
         odd_h = j.get("odd_h")
         odd_a = j.get("odd_a")
         fav_por_odds = False
 
-        if BOT_SOURCE == "apifootball":
+        if BOT_SOURCE == "espn":
+            # ESPN: odds do scoreboard
             if odd_h and odd_a and odd_h > 1 and odd_a > 1:
                 fav_final = "h" if odd_h <= odd_a else "a"
                 fav_por_odds = True
-                print(f"[ODDS] {h} x {a} — odd Casa:{odd_h:.2f} Fora:{odd_a:.2f} (apifootball)")
+                print(f"[ODDS] {h} x {a} — odd Casa:{odd_h:.2f} Fora:{odd_a:.2f} (ESPN)")
+            # Fallback: odds das stats detalhadas (pickcenter do summary)
+            if not fav_por_odds and stats:
+                odd_h_s = stats.get("odd_h")
+                odd_a_s = stats.get("odd_a")
+                if odd_h_s and odd_a_s and odd_h_s > 1 and odd_a_s > 1:
+                    odd_h, odd_a = odd_h_s, odd_a_s
+                    fav_final = "h" if odd_h <= odd_a else "a"
+                    fav_por_odds = True
+                    print(f"[ODDS] {h} x {a} — odd Casa:{odd_h:.2f} Fora:{odd_a:.2f} (ESPN-summary)")
+            # Fallback: apifootball odds
             if not fav_por_odds:
                 try:
                     r_odd = requests.get("https://apiv3.apifootball.com/",
@@ -1688,6 +1974,7 @@ def run():
                         if odd_h > 1 and odd_a > 1:
                             fav_final = "h" if odd_h <= odd_a else "a"
                             fav_por_odds = True
+                            print(f"[ODDS] {h} x {a} — odd Casa:{odd_h:.2f} Fora:{odd_a:.2f} (apifootball)")
                 except: pass
 
 
