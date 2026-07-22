@@ -1936,7 +1936,7 @@ def run():
         fid_raw = j.get("fid_raw", fid)
         stats = {}
         if BOT_SOURCE == "bzzoiro":
-            # Bzzoiro v2: stats principais com dangerous_attack real
+            # Bzzoiro v2: stats principais com dangerous_attack real e escanteios
             if not stats or not (stats.get("escanteios_h", -1) >= 0 and stats.get("escanteios_a", -1) >= 0):
                 try:
                     bzz_id = j.get("bzzoiro_id") or fid_raw
@@ -1944,48 +1944,42 @@ def run():
                         sa_bzz = get_stats_bzzoiro(bzz_id)
                         if isinstance(sa_bzz, dict) and sa_bzz.get("escanteios_h", -1) >= 0:
                             stats = sa_bzz
-                            print(f"[BZZOIRO-STATS] Stats Bzzoiro OK: esc {stats.get('escanteios_h')}x{stats.get('escanteios_a')} | atq_perig {stats.get('ataques_perigosos_h')}x{stats.get('ataques_perigosos_a')}")
+                            print(f"[BZZOIRO-STATS] Stats Bzzoiro OK: esc {stats.get('escanteios_h')}x{stats.get('escanteios_a')} | atq_perig {stats.get('ataques_perigosos_h')}x{stats.get('ataques_perigosos_a')} | chutes: {stats.get('chutes_tot_h')}/{stats.get('chutes_tot_a')}")
                 except Exception as e:
                     print(f"[BZZOIRO-STATS ERRO] {e}")
-            # Fallback: ESPN stats
-            if not stats or not (stats.get("escanteios_h", -1) >= 0 and stats.get("escanteios_a", -1) >= 0):
+
+            # Complemento: se Bzzoiro não tem chutes reais, busca da ESPN/apifootball
+            if stats and stats.get("chutes_tot_h", 0) == 0 and stats.get("chutes_tot_a", 0) == 0:
+                chutes_ok = False
+                # ESPN stats (tem chutes reais)
                 try:
                     league_slug = j.get("league_slug", "")
                     if league_slug:
                         sa_espn = get_stats_espn(fid_raw, league_slug)
-                        if isinstance(sa_espn, dict) and sa_espn.get("escanteios_h", -1) >= 0:
-                            stats = sa_espn
-                            print(f"[ESPN-STATS] Stats ESPN OK: esc {stats.get('escanteios_h')}x{stats.get('escanteios_a')}")
+                        if isinstance(sa_espn, dict) and sa_espn.get("chutes_tot_h", 0) > 0:
+                            stats["chutes_tot_h"] = sa_espn["chutes_tot_h"]
+                            stats["chutes_tot_a"] = sa_espn["chutes_tot_a"]
+                            stats["chutes_gol_h"] = sa_espn.get("chutes_gol_h", 0)
+                            stats["chutes_gol_a"] = sa_espn.get("chutes_gol_a", 0)
+                            chutes_ok = True
+                            print(f"[CHUTES-ESPN] Chutes complementados: {stats['chutes_tot_h']}/{stats['chutes_tot_a']} | alvo: {stats['chutes_gol_h']}/{stats['chutes_gol_a']}")
                 except Exception as e:
-                    print(f"[ESPN-STATS ERRO] {e}")
-            # Fallback: apifootball stats
-            if not stats or not (stats.get("escanteios_h", -1) >= 0 and stats.get("escanteios_a", -1) >= 0):
-                try:
-                    sa_api = get_stats_apifootball_live(fid_raw)
-                    if isinstance(sa_api, dict) and sa_api: stats = sa_api
-                except: pass
-            if not stats or not (stats.get("escanteios_h", -1) >= 0 and stats.get("escanteios_a", -1) >= 0):
-                try:
-                    sa3 = get_stats_apifootball_v3(fid_raw)
-                    if isinstance(sa3, dict) and sa3: stats = sa3
-                except: pass
-            if not stats or not (stats.get("escanteios_h", -1) >= 0 and stats.get("escanteios_a", -1) >= 0):
-                try:
-                    sa_name = get_stats_apifootball_by_name(h, a)
-                    if isinstance(sa_name, dict) and sa_name.get("escanteios_h", -1) >= 0:
-                        stats = sa_name
-                        print(f"[APIF-NAME] Stats por nome OK: esc {sa_name.get('escanteios_h')}x{sa_name.get('escanteios_a')}")
-                except: pass
-            # Se a Bzzoiro veio mas sem ataques_perigosos, calcula sinteticamente
-            if stats and stats.get("escanteios_h", -1) >= 0 and stats.get("ataques_perigosos_h", -1) < 0:
-                ch_tot_h = stats.get("chutes_tot_h", 0)
-                ch_tot_a = stats.get("chutes_tot_a", 0)
-                ch_gol_h = stats.get("chutes_gol_h", 0)
-                ch_gol_a = stats.get("chutes_gol_a", 0)
-                stats["ataques_perigosos_h"] = ch_tot_h + ch_gol_h
-                stats["ataques_perigosos_a"] = ch_tot_a + ch_gol_a
-                if stats["ataques_perigosos_h"] > 0 or stats["ataques_perigosos_a"] > 0:
-                    print(f"[ATQ-SINTETICO] Ataques perigosos calculados: {stats['ataques_perigosos_h']}x{stats['ataques_perigosos_a']} (chutes_tot + chutes_gol)")
+                    print(f"[CHUTES-ESPN ERRO] {e}")
+
+                if not chutes_ok:
+                    try:
+                        sa = get_stats_apifootball_v3(fid_raw)
+                        if isinstance(sa, dict) and sa.get("chutes_tot_h", 0) > 0:
+                            stats["chutes_tot_h"] = sa["chutes_tot_h"]
+                            stats["chutes_tot_a"] = sa["chutes_tot_a"]
+                            stats["chutes_gol_h"] = sa.get("chutes_gol_h", 0)
+                            stats["chutes_gol_a"] = sa.get("chutes_gol_a", 0)
+                            chutes_ok = True
+                            print(f"[CHUTES-APIF] Chutes complementados: {stats['chutes_tot_h']}/{stats['chutes_tot_a']}")
+                    except:
+                        pass
+
+            # Fallback completo: se Bzzoiro não retornou NADA, tenta ESPN + apifootball tradicional
 
         # Preenche defaults para campos que faltam
         for k in ["chutes_tot_h","chutes_tot_a","chutes_gol_h","chutes_gol_a"]:
