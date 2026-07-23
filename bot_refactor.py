@@ -378,6 +378,9 @@ def enviar_relatorio_diario():
     hoje = datetime.now(BRT).strftime("%d/%m/%Y")
     greens, reds = get_relatorio_hoje()
     msg = gerar_layout_relatorio(greens, reds, hoje)
+    sent_ctrl = load_sent()
+    if hoje_key in sent_ctrl:
+        return
     if send_telegram(msg):
         sent_ctrl.add(hoje_key)
         save_sent(sent_ctrl)
