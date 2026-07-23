@@ -706,5 +706,11 @@
     "resultado": "red",
     "mercado": "OVERGOAL",
     "timestamp": "2026-07-23T17:35:26.367972-03:00"
+  },
+  {
+    "data": "2026-07-23",
+    "resultado": "red",
+    "mercado": "BTTS",
+    "timestamp": "2026-07-23T17:35:29.027472-03:00"
   }
 ]
