@@ -269,6 +269,22 @@ def _crit(mercado, geral, key, default):
         return geral[key]
     return default
 
+def _situacao_fav_ok(mercado, geral, fav_gols, adv_gols):
+    """Verifica se a situação do favorito é válida conforme config.
+    Opções: perdendo | empatando | perdendo_ou_empatando | zebra"""
+    valor = _crit(mercado, geral, "situacao_favorito", None)
+    if not valor:
+        return True  # sem config = permite tudo (compatibilidade)
+    if valor == "perdendo":
+        return fav_gols < adv_gols
+    if valor == "empatando":
+        return fav_gols == adv_gols
+    if valor == "perdendo_ou_empatando":
+        return fav_gols <= adv_gols
+    if valor == "zebra":
+        return fav_gols < adv_gols
+    return True
+
 def _github_headers():
     return {
         "Authorization": f"Bearer {GITHUB_TOKEN}",
@@ -2207,22 +2223,6 @@ def run():
         # ─── DIAGNÓSTICO INICIAL DO JOGO ───
         print(f"[DIAG] {h} x {a} | placar={placar} | min={m} | periodo={p} | fav={fav_final} | gols_fav={fav_gols} gols_adv={adv_gols} | odds_casa={odd_h} odds_fora={odd_a} | chutes_totais={stats.get('chutes_tot_h',0)}x{stats.get('chutes_tot_a',0)} | chutes_gol={stats.get('chutes_gol_h',0)}x{stats.get('chutes_gol_a',0)} | atq_perig={stats.get('ataques_perigosos_h',0)}x{stats.get('ataques_perigosos_a',0)} | escanteios={stats.get('escanteios_h','?')}x{stats.get('escanteios_a','?')} | red_fav={red_fav}")
 
-        # Favorito empatando = placar igual
-        fav_empatando = (sh == sa)
-        # Favorito perdendo por exatamente 1 gol — SOMENTE placares 0x1 ou 1x0 (total = 1 gol) — usado em OFT
-        fav_perdendo_1 = (adv_gols - fav_gols) == 1 and (sh + sa) == 1
-        # Favorito perdendo por exatamente 1 gol sem restrição de total — usado em escanteios e overgoal
-        fav_perdendo_1_livre = (adv_gols - fav_gols) == 1
-        # Condição escanteio: fav empatando OU perdendo por 1 (qualquer placar)
-        corner_valido = fav_empatando or fav_perdendo_1_livre
-        # Over 1.5 FT: placares válidos APENAS 1x0 ou 0x1 (fav perdendo por 1, total = 1 gol)
-        fav_gols_oft = sh if fav_final == "h" else sa
-        adv_gols_oft = sa if fav_final == "h" else sh
-        oft_valido = (
-            (adv_gols_oft - fav_gols_oft) == 1 and
-            (sh + sa) == 1
-        )
-
         # APPM, chutes, escanteios — valores brutos (cada mercado usa seu threshold)
         _aph_val = stats.get("ataques_perigosos_h", 0) if stats else 0
         _apa_val = stats.get("ataques_perigosos_a", 0) if stats else 0
@@ -2265,8 +2265,8 @@ def run():
             ht_chutes_tot_ok = (_chutes_tot_h + _chutes_tot_a) >= ht_chutes_tot
             if not (sh == 0 and sa == 0):
                 print(f"[DIAG-HT-BARRA] {h} x {a} — placar não é 0x0 ({placar}), pulando")
-            elif not fav_empatando:
-                print(f"[DIAG-HT-BARRA] {h} x {a} — favorito não empatando (fav={fav_final}, gols_fav={fav_gols} adv={adv_gols}), pulando")
+            elif not _situacao_fav_ok(M_HT, GERAL, fav_gols, adv_gols):
+                print(f"[DIAG-HT-BARRA] {h} x {a} — situação do favorito não atende critério (fav_gols={fav_gols} adv={adv_gols}), pulando")
             elif red_fav > ht_red_max:
                 print(f"[DIAG-HT-BARRA] {h} x {a} — favorito com cartão vermelho ({red_fav} > {ht_red_max}), pulando")
             elif not ht_appm_ok:
@@ -2305,8 +2305,8 @@ def run():
             b_appm_ok = _appm_h >= b_appm_time or _appm_a >= b_appm_time or _appm_total >= b_appm_total
             b_media_ok = media_hist >= b_media if media_hist >= 0 else False
             b_chutes_ok = (_chutes_alvo_h + _chutes_alvo_a) >= b_chutes_alvo
-            if not fav_perdendo_1:
-                print(f"[DIAG-BTTS-BARRA] {h} x {a} — favorito não perdendo por 1 (fav_gols={fav_gols} adv={adv_gols}), pulando")
+            if not _situacao_fav_ok(M_BTTS, GERAL, fav_gols, adv_gols):
+                print(f"[DIAG-BTTS-BARRA] {h} x {a} — situação do favorito não atende critério (fav_gols={fav_gols} adv={adv_gols}), pulando")
             elif red_fav > b_red_max:
                 print(f"[DIAG-BTTS-BARRA] {h} x {a} — favorito com cartão vermelho ({red_fav} > {b_red_max}), pulando")
             elif not b_appm_ok:
@@ -2339,8 +2339,8 @@ def run():
             o_red_max = _crit(M_OFT, GERAL, "max_red_card_fav", 0)
             o_appm_ok = _appm_h >= o_appm_time or _appm_a >= o_appm_time or _appm_total >= o_appm_total
             o_media_ok = media_hist >= o_media if media_hist >= 0 else False
-            if not fav_perdendo_1:
-                print(f"[DIAG-OFT-BARRA] {h} x {a} — favorito não perdendo por 1 (fav_gols={fav_gols} adv={adv_gols}), pulando")
+            if not _situacao_fav_ok(M_OFT, GERAL, fav_gols, adv_gols):
+                print(f"[DIAG-OFT-BARRA] {h} x {a} — situação do favorito não atende critério (fav_gols={fav_gols} adv={adv_gols}), pulando")
             elif red_fav > o_red_max:
                 print(f"[DIAG-OFT-BARRA] {h} x {a} — favorito com cartão vermelho ({red_fav} > {o_red_max}), pulando")
             elif not o_appm_ok:
@@ -2364,7 +2364,6 @@ def run():
         # MERCADO 4: OVER GOL PARTIDA
         og_ini = M_OG.get("minuto_inicio", 55)
         og_fim = M_OG.get("minuto_fim", 75)
-        overgoal_valido = (fav_empatando or fav_perdendo_1)
         if M_OG.get("ativo", True) and p == M_OG.get("periodo", 2) and og_ini <= m <= og_fim:
             og_appm_time = _crit(M_OG, GERAL, "appm_min_por_time", 0.7)
             og_appm_total = _crit(M_OG, GERAL, "appm_min_total", 1.4)
@@ -2375,8 +2374,8 @@ def run():
             og_red_max = _crit(M_OG, GERAL, "max_red_card_fav", 0)
             og_appm_ok = _appm_h >= og_appm_time or _appm_a >= og_appm_time or _appm_total >= og_appm_total
             og_media_ok = media_hist >= og_media if media_hist >= 0 else False
-            if not overgoal_valido:
-                print(f"[DIAG-OVERGOAL-BARRA] {h} x {a} — favorito não empata nem perde por 1 (fav_empatando={fav_empatando} fav_perdendo_1={fav_perdendo_1}), pulando")
+            if not _situacao_fav_ok(M_OG, GERAL, fav_gols, adv_gols):
+                print(f"[DIAG-OVERGOAL-BARRA] {h} x {a} — situação do favorito não atende critério (fav_gols={fav_gols} adv={adv_gols}), pulando")
             elif red_fav > og_red_max:
                 print(f"[DIAG-OVERGOAL-BARRA] {h} x {a} — favorito com cartão vermelho ({red_fav} > {og_red_max}), pulando")
             elif not og_appm_ok:
@@ -2419,9 +2418,8 @@ def run():
             cht_red_max = _crit(M_CHT, GERAL, "max_red_card_fav", 0)
             cht_appm_ok = _appm_h >= cht_appm_time or _appm_a >= cht_appm_time or _appm_total >= cht_appm_total
             cht_esc_ok = (_escanteios_h + _escanteios_a) >= cht_escanteios if _escanteios_h >= 0 and _escanteios_a >= 0 else True
-            corner_cond = corner_valido
-            if not corner_cond:
-                print(f"[DIAG-CORNER-HT-BARRA] {h} x {a} — favorito não empata nem perde por 1 (fav_empatando={fav_empatando} fav_perdendo_1={fav_perdendo_1}), pulando")
+            if not _situacao_fav_ok(M_CHT, GERAL, fav_gols, adv_gols):
+                print(f"[DIAG-CORNER-HT-BARRA] {h} x {a} — situação do favorito não atende critério (fav_gols={fav_gols} adv={adv_gols}), pulando")
             elif red_fav > cht_red_max:
                 print(f"[DIAG-CORNER-HT-BARRA] {h} x {a} — favorito com cartão vermelho ({red_fav} > {cht_red_max}), pulando")
             elif not cht_appm_ok:
@@ -2457,9 +2455,8 @@ def run():
             cft_red_max = _crit(M_CFT, GERAL, "max_red_card_fav", 0)
             cft_appm_ok = _appm_h >= cft_appm_time or _appm_a >= cft_appm_time or _appm_total >= cft_appm_total
             cft_esc_ok = (_escanteios_h + _escanteios_a) >= cft_escanteios if _escanteios_h >= 0 and _escanteios_a >= 0 else True
-            corner_ft_cond = corner_valido
-            if not corner_ft_cond:
-                print(f"[DIAG-CORNER-FT-BARRA] {h} x {a} — favorito não empata nem perde por 1 (fav_empatando={fav_empatando} fav_perdendo_1={fav_perdendo_1}), pulando")
+            if not _situacao_fav_ok(M_CFT, GERAL, fav_gols, adv_gols):
+                print(f"[DIAG-CORNER-FT-BARRA] {h} x {a} — situação do favorito não atende critério (fav_gols={fav_gols} adv={adv_gols}), pulando")
             elif red_fav > cft_red_max:
                 print(f"[DIAG-CORNER-FT-BARRA] {h} x {a} — favorito com cartão vermelho ({red_fav} > {cft_red_max}), pulando")
             elif not cft_appm_ok:
