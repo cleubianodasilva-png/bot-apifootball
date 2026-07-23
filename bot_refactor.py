@@ -996,7 +996,9 @@ def get_stats_sokkerpro(fid_raw, home="", away=""):
                         "ataques_perigosos_h": _get_int(fix.get('localAttacksDangerousAttacks', 0)),
                         "ataques_perigosos_a": _get_int(fix.get('visitorAttacksDangerousAttacks', 0)),
                         "red_cards_h": _get_int(fix.get('localRedCards', 0)),
-                        "red_cards_a": _get_int(fix.get('visitorRedCards', 0))
+                        "red_cards_a": _get_int(fix.get('visitorRedCards', 0)),
+                        "medias_home_goal": _get_float(fix.get('medias_home_goal', 0)),
+                        "medias_away_goal": _get_float(fix.get('medias_away_goal', 0))
                     }
     except: pass
     return {}
@@ -1083,6 +1085,8 @@ def get_stats_sokkerpro_by_name(home, away):
                         "escanteios_a": _get_int(fix.get('visitorCorners', 0)),
                         "ataques_perigosos_h": _get_int(fix.get('localAttacksDangerousAttacks', 0)),
                         "ataques_perigosos_a": _get_int(fix.get('visitorAttacksDangerousAttacks', 0)),
+                        "medias_home_goal": _get_float(fix.get('medias_home_goal', 0)),
+                        "medias_away_goal": _get_float(fix.get('medias_away_goal', 0))
                     }
     except: pass
     return {}
@@ -1881,6 +1885,35 @@ def get_media_gols_historica(home_id, away_id):
         _HIST_CACHE[chave] = 0.0
         return 0.0
 
+def get_media_gols_historica_skp(home, away, stats):
+    """Retorna a média de gols usando os campos medias da própria API SokkerPro.
+    As médias são fornecidas pela SokkerPro (mínimo 10 jogos).
+    Sem dados = retorna -1 (bloqueia: -1 < 2.2 = False).
+    Aplicado APENAS nos mercados de gol (escanteios livres)."""
+    chave = f"{home}_{away}"
+    if chave in _HIST_CACHE:
+        return _HIST_CACHE[chave]
+
+    if not stats:
+        _HIST_CACHE[chave] = -1.0
+        return -1.0
+
+    try:
+        media_h = stats.get("medias_home_goal", 0)
+        media_a = stats.get("medias_away_goal", 0)
+
+        # Sem dados de média → retorna -1 (bloqueia na prática)
+        if media_h <= 0 and media_a <= 0:
+            _HIST_CACHE[chave] = -1.0
+            return -1.0
+
+        media_total = media_h + media_a
+        _HIST_CACHE[chave] = media_total
+        return media_total
+    except:
+        _HIST_CACHE[chave] = -1.0
+        return -1.0
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # LOOP PRINCIPAL
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -2131,14 +2164,16 @@ def run():
         if not appm_valido:
             print(f"[APPM-BLOQUEADO] {h} x {a} — APPM casa={_appm_h} fora={_appm_a} total={_appm_total} (mín: 0.7/time ou 1.4 total)")
 
-        # HISTÓRICO — Média de gols por partida (jogo todo) ≥ 2.0
-        # Req. para: Over Gol HT, Over Gol FT e BTTS
+        # HISTÓRICO — Média de gols por partida (jogo todo) ≥ 2.2
+        # Req. para: Over Gol HT, Over Gol FT e BTTS → APENAS mercados de gol
+        # Escanteios NÃO usam filtro de média histórica
         home_id = j.get("home_id", "")
         away_id = j.get("away_id", "")
         media_hist = 0.0
-        # SokkerPro: não tem histórico compatível com apifootball, libera tudo
         if BOT_SOURCE == "sokkerpro":
-            hist_ok = True
+            # SokkerPro: usa médias nativas da própria API SokkerPro
+            media_hist = get_media_gols_historica_skp(h, a, stats)
+            hist_ok = media_hist >= 2.2  # -1 = sem dados, bloqueia
         else:
             if home_id and away_id:
                 media_hist = get_media_gols_historica(home_id, away_id)
