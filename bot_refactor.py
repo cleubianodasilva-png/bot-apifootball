@@ -1690,16 +1690,18 @@ def checar_resultado(sinal):
             return "green" if total_final > gols_entrada else ("red" if is_final else None)
             
         elif mercado in ["CORNER_HT"]:
-            stats = get_stats_sokkerpro(fid_raw)
-            c_final = max(0, stats.get("escanteios_h", 0)) + max(0, stats.get("escanteios_a", 0))
+            c_h = _get_int(fixture.get('localCorners', 0))
+            c_a = _get_int(fixture.get('visitorCorners', 0))
+            c_final = max(0, c_h) + max(0, c_a)
             c_entrada = sinal.get("extra_val", 0)
             if c_final > c_entrada: return "green"
             # RED se já entrou no 2º tempo (escanteios do 1º tempo já estão finalizados)
             return "red" if is_2h else None
 
         elif mercado == "CORNER_FT":
-            stats = get_stats_sokkerpro(fid_raw)
-            c_final = max(0, stats.get("escanteios_h", 0)) + max(0, stats.get("escanteios_a", 0))
+            c_h = _get_int(fixture.get('localCorners', 0))
+            c_a = _get_int(fixture.get('visitorCorners', 0))
+            c_final = max(0, c_h) + max(0, c_a)
             c_entrada = sinal.get("extra_val", 0)
             if c_final > c_entrada: return "green"
             return "red" if is_final else None
