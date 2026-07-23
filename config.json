@@ -1,75 +1,133 @@
 {
-  "_comentario": "Configuração do Bot Máquina de Greens VIP. Edite pelo painel ou manualmente.",
+  "_comentario": "Configuração completa do Bot Máquina de Greens VIP. Todos os critérios que a API fornece estão aqui para edição.",
+
   "geral": {
     "appm_min_por_time": 0.7,
     "appm_min_total": 1.4,
-    "media_gols_minima": 2.2
+    "media_gols_partida_min": 2.2,
+    "media_gols_ht_min": 1.0,
+    "media_gols_ft_min": 1.2,
+    "chutes_alvo_min": 3,
+    "chutes_totais_min": 6,
+    "escanteios_minimos": 2,
+    "ataques_perigosos_min": 15,
+    "max_red_card_fav": 0,
+    "diferenca_gols_fav_max": 1,
+    "btts_probabilidade_min": 50
   },
+
   "mercados": {
     "over_05_ht": {
       "ativo": true,
-      "nome": "Over 0.5 Gols HT",
+      "nome": "⚽️🔥OVER GOL INTERVALO🔥⚽️",
       "periodo": 1,
       "minuto_inicio": 15,
       "minuto_fim": 27,
-      "placar_valido": "0x0",
-      "favorito_empatando": true,
-      "bloquear_vermelho_fav": true,
-      "usar_media_gols": true
+      "criterios": {
+        "placar": "0x0",
+        "favorito_empatando": true,
+        "max_red_card_fav": 0,
+        "diferenca_gols_fav_max": 0,
+        "appm_min_por_time": 0.7,
+        "appm_min_total": 1.4,
+        "media_gols_partida_min": 2.2,
+        "media_gols_ht_min": 1.0,
+        "chutes_alvo_min": 3,
+        "chutes_totais_min": 6,
+        "ataques_perigosos_min": 15
+      }
     },
     "ambas_marcam": {
       "ativo": true,
-      "nome": "Ambas Marcam",
+      "nome": "⚽️🔥AMBAS MARCAM🔥⚽️",
       "periodo": 2,
       "minuto_inicio": 55,
       "minuto_fim": 75,
-      "placar_valido": "1x0_0x1",
-      "favorito_perdendo_1": true,
-      "bloquear_vermelho_fav": true,
-      "usar_media_gols": true
+      "criterios": {
+        "placar": "1x0_0x1",
+        "favorito_perdendo_1": true,
+        "max_red_card_fav": 0,
+        "diferenca_gols_fav_max": 1,
+        "appm_min_por_time": 0.7,
+        "appm_min_total": 1.4,
+        "media_gols_partida_min": 2.2,
+        "media_gols_ft_min": 1.2,
+        "chutes_alvo_min": 3,
+        "chutes_totais_min": 6,
+        "ataques_perigosos_min": 15,
+        "btts_probabilidade_min": 50
+      }
     },
     "over_15_ft": {
       "ativo": true,
-      "nome": "Over 1.5 Gols FT",
+      "nome": "⚽️🔥OVER 1.5 GOLS PARTIDA🔥⚽️",
       "periodo": 2,
       "minuto_inicio": 55,
       "minuto_fim": 75,
-      "placar_valido": "1x0_0x1",
-      "favorito_perdendo_1": true,
-      "bloquear_vermelho_fav": true,
-      "usar_media_gols": true
+      "criterios": {
+        "placar": "1x0_0x1",
+        "favorito_perdendo_1": true,
+        "max_red_card_fav": 0,
+        "diferenca_gols_fav_max": 1,
+        "appm_min_por_time": 0.7,
+        "appm_min_total": 1.4,
+        "media_gols_partida_min": 2.2,
+        "media_gols_ft_min": 1.2,
+        "chutes_alvo_min": 3,
+        "chutes_totais_min": 6,
+        "ataques_perigosos_min": 15
+      }
     },
     "over_gol_partida": {
       "ativo": true,
-      "nome": "Over Gol Partida",
+      "nome": "⚽️🔥OVER GOL PARTIDA🔥⚽️",
       "periodo": 2,
       "minuto_inicio": 55,
       "minuto_fim": 75,
-      "placares_validos": "0x0_1x1_0x1_1x0",
-      "favorito_empatando_ou_perdendo_1": true,
-      "bloquear_vermelho_fav": true,
-      "usar_media_gols": true,
-      "linha_dinamica": true
+      "criterios": {
+        "placares_validos": "0x0_1x1_0x1_1x0",
+        "favorito_empatando_ou_perdendo_1": true,
+        "max_red_card_fav": 0,
+        "diferenca_gols_fav_max": 1,
+        "appm_min_por_time": 0.7,
+        "appm_min_total": 1.4,
+        "media_gols_partida_min": 2.2,
+        "media_gols_ft_min": 1.2,
+        "chutes_alvo_min": 3,
+        "chutes_totais_min": 6,
+        "ataques_perigosos_min": 15,
+        "linha_dinamica": true
+      }
     },
     "escanteio_ht": {
       "ativo": true,
-      "nome": "Escanteio HT",
+      "nome": "🚩🔥ESCANTEIO ÁSIAT/LMT HT🔥🚩",
       "periodo": 1,
       "minuto_inicio": 32,
       "minuto_fim": 38,
-      "favorito_empatando_ou_perdendo_1": true,
-      "bloquear_vermelho_fav": true,
-      "usar_media_gols": false
+      "criterios": {
+        "favorito_empatando_ou_perdendo_1": true,
+        "max_red_card_fav": 0,
+        "diferenca_gols_fav_max": 1,
+        "appm_min_por_time": 0.7,
+        "appm_min_total": 1.4,
+        "escanteios_minimos": 2
+      }
     },
     "escanteio_ft": {
       "ativo": true,
-      "nome": "Escanteio FT",
+      "nome": "🚩🔥ESCANTEIO ÁSIAT/LMT FT🔥🚩",
       "periodo": 2,
       "minuto_inicio": 82,
       "minuto_fim": 88,
-      "favorito_empatando_ou_perdendo_1": true,
-      "bloquear_vermelho_fav": true,
-      "usar_media_gols": false
+      "criterios": {
+        "favorito_empatando_ou_perdendo_1": true,
+        "max_red_card_fav": 0,
+        "diferenca_gols_fav_max": 1,
+        "appm_min_por_time": 0.7,
+        "appm_min_total": 1.4,
+        "escanteios_minimos": 2
+      }
     }
   }
 }
