@@ -149,8 +149,7 @@ def get_stats_bzzoiro(fid_raw):
         if not home or not away:
             return stats
         
-        # ✅ Bzzoiro v2 AGORA TEM dados de chutes nativos (total_shots, shots_on_target).
-        #    Extrai direto sem depender de fallback ESPN/Promiedos.
+        # Bzzoiro TEM dados de chutes (total_shots e shots_on_target) na v2
         stats["chutes_tot_h"] = int(home.get("total_shots", 0) or 0)
         stats["chutes_tot_a"] = int(away.get("total_shots", 0) or 0)
         stats["chutes_gol_h"] = int(home.get("shots_on_target", 0) or 0)
