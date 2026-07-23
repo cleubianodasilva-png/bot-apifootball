@@ -13,7 +13,9 @@
     "escanteios_minimos": 2,
     "diferenca_gols_fav_max": 1,
     "max_red_card_fav": 0,
-    "btts_probabilidade_min": 50
+    "btts_probabilidade_min": 50,
+    "situacao_favorito": "",
+    "linha_dinamica": false
   },
   "situacao_favorito": "perdendo_ou_empatando",
   "_comentario_geral": "Se 'ativo: false', o bot ignora os valores globais e usa só os critérios de cada mercado. situacao_favorito: perdendo | empatando | perdendo_ou_empatando | zebra",
@@ -35,7 +37,11 @@
         "chutes_totais_min": 6,
         "ataques_perigosos_min": 15,
         "max_red_card_fav": 0,
-        "diferenca_gols_fav_max": 0
+        "diferenca_gols_fav_max": 0,
+        "media_gols_ft_min": 1.2,
+        "escanteios_minimos": 2,
+        "btts_probabilidade_min": 50,
+        "linha_dinamica": false
       }
     },
     "ambas_marcam": {
@@ -56,7 +62,10 @@
         "ataques_perigosos_min": 15,
         "max_red_card_fav": 0,
         "diferenca_gols_fav_max": 1,
-        "btts_probabilidade_min": 50
+        "btts_probabilidade_min": 50,
+        "media_gols_ht_min": 1.0,
+        "escanteios_minimos": 2,
+        "linha_dinamica": false
       }
     },
     "over_15_ft": {
@@ -76,7 +85,11 @@
         "chutes_totais_min": 6,
         "ataques_perigosos_min": 15,
         "max_red_card_fav": 0,
-        "diferenca_gols_fav_max": 1
+        "diferenca_gols_fav_max": 1,
+        "media_gols_ht_min": 1.0,
+        "escanteios_minimos": 2,
+        "btts_probabilidade_min": 50,
+        "linha_dinamica": false
       }
     },
     "over_gol_partida": {
@@ -97,7 +110,10 @@
         "ataques_perigosos_min": 15,
         "max_red_card_fav": 0,
         "diferenca_gols_fav_max": 1,
-        "linha_dinamica": true
+        "linha_dinamica": true,
+        "media_gols_ht_min": 1.0,
+        "escanteios_minimos": 2,
+        "btts_probabilidade_min": 50
       }
     },
     "escanteio_ht": {
@@ -112,7 +128,15 @@
         "appm_min_total": 1.4,
         "escanteios_minimos": 2,
         "max_red_card_fav": 0,
-        "diferenca_gols_fav_max": 1
+        "diferenca_gols_fav_max": 1,
+        "media_gols_partida_min": 2.2,
+        "media_gols_ht_min": 1.0,
+        "media_gols_ft_min": 1.2,
+        "chutes_alvo_min": 3,
+        "chutes_totais_min": 6,
+        "ataques_perigosos_min": 15,
+        "btts_probabilidade_min": 50,
+        "linha_dinamica": false
       }
     },
     "escanteio_ft": {
@@ -127,7 +151,15 @@
         "appm_min_total": 1.4,
         "escanteios_minimos": 2,
         "max_red_card_fav": 0,
-        "diferenca_gols_fav_max": 1
+        "diferenca_gols_fav_max": 1,
+        "media_gols_partida_min": 2.2,
+        "media_gols_ht_min": 1.0,
+        "media_gols_ft_min": 1.2,
+        "chutes_alvo_min": 3,
+        "chutes_totais_min": 6,
+        "ataques_perigosos_min": 15,
+        "btts_probabilidade_min": 50,
+        "linha_dinamica": false
       }
     }
   }
