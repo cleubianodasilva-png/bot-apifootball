@@ -274,6 +274,17 @@ def _crit(mercado, geral, key, default):
         return v
     return default
 
+def _crit_val(criterios, geral, key, default):
+    """Pega valor de critério de um dict de critérios: criterios > geral > default."""
+    if key in criterios:
+        return criterios[key]
+    if key in geral:
+        v = geral[key]
+        if isinstance(v, str) and not v.strip():
+            return default
+        return v
+    return default
+
 def _situacao_fav_ok(mercado, geral, fav_gols, adv_gols):
     """Verifica se a situação do favorito é válida conforme config.
     Opções: perdendo | empatando | perdendo_ou_empatando | zebra"""
@@ -1351,8 +1362,20 @@ def calcular_prob_gols_ht(chutes_tot, chutes_gol, minuto):
     prob_15_ft = round((1 - _math.exp(-max(xg_total_ft - 1, 0.1))) * 100, 1)
     return prob_15_ft, prob_05_ht
 
-def filtrar_janelas(jogos):
+def filtrar_janelas(jogos, cfg=None):
     resultado = []
+    # Coleta ranges dos mercados personalizados
+    custom_ranges = []
+    if cfg:
+        merc = cfg.get("mercados", {})
+        for key, md in merc.items():
+            if key in ("over_05_ht","ambas_marcam","over_15_ft","over_gol_partida","escanteio_ht","escanteio_ft"):
+                continue
+            if md.get("ativo"):
+                ini = md.get("minuto_inicio", 0)
+                fim = md.get("minuto_fim", 99)
+                per = md.get("periodo", 0)
+                custom_ranges.append((ini, fim, per))
     for j in jogos:
         m = j["minuto"]
         p_raw = j["period"]
@@ -1367,6 +1390,13 @@ def filtrar_janelas(jogos):
             (p == 2 and 55 <= m <= 77) or
             (p == 2 and 78 <= m <= 88)
         )
+        # Também verifica ranges de mercados personalizados
+        if not em_janela:
+            for (ini, fim, per) in custom_ranges:
+                if per == 0 or p == per:
+                    if ini <= m <= fim:
+                        em_janela = True
+                        break
         if em_janela:
             resultado.append(j)
     return resultado
@@ -1797,6 +1827,16 @@ def checar_resultado(sinal):
             if c_final > c_entrada: return "green"
             return "red" if is_final else None
 
+        # Mercados personalizados: auditoria genérica
+        elif mercado and mercado.startswith("custom_"):
+            extra = sinal.get("extra_val")
+            if extra is not None:
+                # Over X gols
+                if total_final > extra: return "green"
+                return "red" if is_final else None
+            # Sem info extra, só confirma se o jogo acabou (sem green/red automático)
+            return None
+
         return None
     except: return None
 
@@ -1982,7 +2022,7 @@ def run_ciclo(cfg, GERAL, MERCADOS, M_HT, M_BTTS, M_OFT, M_OG, M_CHT, M_CFT, sen
         print(f"[SokkerPro] {len(jogos_live)} jogos ao vivo")
 
     # PASSO 2: Filtra janelas alvo
-    jogos_na_janela = filtrar_janelas(jogos_live)
+    jogos_na_janela = filtrar_janelas(jogos_live, cfg)
     print(f"[Janela] {len(jogos_na_janela)} jogos nas janelas alvo")
 
     check_status_command(total_jogos_live=len(jogos_live), jogos_live=jogos_live, jogos_na_janela=jogos_na_janela)
@@ -2409,6 +2449,104 @@ def run_ciclo(cfg, GERAL, MERCADOS, M_HT, M_BTTS, M_OFT, M_OG, M_CHT, M_CFT, sen
                     sent.add(key)
                     total_env += 1
                     registrar_sinal(fid, "CORNER_FT", h, a, mid, extra_val=cantos)
+
+        # ═══════════════════════════════════════════════════════════
+        # MERCADOS PERSONALIZADOS (do config.json)
+        # ═══════════════════════════════════════════════════════════
+        for ck, cm in MERCADOS.items():
+            if ck in ("over_05_ht","ambas_marcam","over_15_ft","over_gol_partida","escanteio_ht","escanteio_ft"):
+                continue
+            if not cm.get("ativo", True):
+                continue
+            cnome = cm.get("nome", ck)
+            cini = cm.get("minuto_inicio", 0)
+            cfim = cm.get("minuto_fim", 99)
+            cper = cm.get("periodo", 0)
+            if cper > 0 and p != cper:
+                continue
+            if not (cini <= m <= cfim):
+                continue
+            cc = cm.get("criterios", {})
+            # Placar válido
+            cplacar = cm.get("placar_valido", "")
+            if cplacar:
+                placares_validos = [x.strip() for x in cplacar.replace("_","x").split(",")]
+                if placar not in placares_validos:
+                    continue
+            # Critérios
+            c_appm_time = _crit_val(cc, GERAL, "appm_min_por_time", 0)
+            c_appm_total = _crit_val(cc, GERAL, "appm_min_total", 0)
+            c_media = _crit_val(cc, GERAL, "media_gols_partida_min", 0)
+            c_media_ht = _crit_val(cc, GERAL, "media_gols_ht_min", 0)
+            c_media_ft = _crit_val(cc, GERAL, "media_gols_ft_min", 0)
+            c_chutes_alvo = _crit_val(cc, GERAL, "chutes_alvo_min", 0)
+            c_chutes_tot = _crit_val(cc, GERAL, "chutes_totais_min", 0)
+            c_atq = _crit_val(cc, GERAL, "ataques_perigosos_min", 0)
+            c_esc = _crit_val(cc, GERAL, "escanteios_minimos", 0)
+            c_posse = _crit_val(cc, GERAL, "posse_min", 0)
+            c_red_max = _crit_val(cc, GERAL, "max_red_card_fav", 99)
+            c_diff_max = _crit_val(cc, GERAL, "diferenca_gols_fav_max", 99)
+            c_btts_prob = _crit_val(cc, GERAL, "btts_probabilidade_min", 0)
+            c_linha = _crit_val(cc, GERAL, "linha_dinamica", 0)
+            c_situacao = cc.get("situacao_favorito", "") or GERAL.get("situacao_favorito", "")
+            c_ativo_geral = GERAL.get("ativo", False)
+            # Aplica fallback global se ativo
+            if c_ativo_geral:
+                if c_appm_time == 0: c_appm_time = GERAL.get("appm_min_por_time", 0)
+                if c_appm_total == 0: c_appm_total = GERAL.get("appm_min_total", 0)
+                if c_media == 0: c_media = GERAL.get("media_gols_partida_min", 0)
+                if c_chutes_alvo == 0: c_chutes_alvo = GERAL.get("chutes_alvo_min", 0)
+                if c_chutes_tot == 0: c_chutes_tot = GERAL.get("chutes_totais_min", 0)
+                if c_atq == 0: c_atq = GERAL.get("ataques_perigosos_min", 0)
+                if c_esc == 0: c_esc = GERAL.get("escanteios_minimos", 0)
+                if c_red_max == 99: c_red_max = GERAL.get("max_red_card_fav", 99)
+                if c_diff_max == 99: c_diff_max = GERAL.get("diferenca_gols_fav_max", 99)
+            barras = []
+            # Situação do favorito
+            if c_situacao:
+                if c_situacao == "perdendo" and not (fav_gols < adv_gols):
+                    barras.append("situação do favorito não atende")
+                elif c_situacao == "empatando" and not (fav_gols == adv_gols):
+                    barras.append("situação do favorito não atende")
+                elif c_situacao == "perdendo_ou_empatando" and not (fav_gols <= adv_gols):
+                    barras.append("situação do favorito não atende")
+                elif c_situacao == "zebra" and not (fav_gols > adv_gols):
+                    barras.append("situação do favorito não atende")
+            if red_fav > c_red_max:
+                barras.append("cartão vermelho")
+            if c_appm_time > 0 and not (_appm_h >= c_appm_time or _appm_a >= c_appm_time):
+                barras.append("APPM por time insuficiente")
+            if c_appm_total > 0 and _appm_total < c_appm_total:
+                barras.append("APPM total insuficiente")
+            if c_media > 0 and media_hist >= 0 and media_hist < c_media:
+                barras.append(f"média histórica {media_hist:.1f} < {c_media}")
+            if c_chutes_alvo > 0 and (_chutes_alvo_h + _chutes_alvo_a) < c_chutes_alvo:
+                barras.append("chutes no alvo insuficientes")
+            if c_chutes_tot > 0 and (_chutes_tot_h + _chutes_tot_a) < c_chutes_tot:
+                barras.append("chutes totais insuficientes")
+            if c_atq > 0 and (_ataques_perigosos_h + _ataques_perigosos_a) < c_atq:
+                barras.append("ataques perigosos insuficientes")
+            if c_esc > 0 and (_escanteios_h >= 0 and _escanteios_a >= 0) and (_escanteios_h + _escanteios_a) < c_esc:
+                barras.append("escanteios insuficientes")
+            if c_posse > 0 and not (_posse_h >= c_posse or _posse_a >= c_posse):
+                barras.append("posse de bola insuficiente")
+            if c_diff_max < 99 and (adv_gols - fav_gols) > c_diff_max:
+                barras.append("diferença de gols máxima excedida")
+            if barras:
+                print(f"[DIAG-CUSTOM-{ck}] {h} x {a} — {'; '.join(barras)}")
+                continue
+            # Tudo ok — enviar sinal
+            hoje = datetime.now(BRT).strftime('%Y%m%d')
+            key = f"{dedup_id}_{ck}_{hoje}"
+            if key in sent:
+                print(f"[DIAG-CUSTOM-DUP-{ck}] {h} x {a} — já enviado hoje")
+            else:
+                entrada = cnome
+                mid = send_telegram(msg_universal(h, a, m, liga, pais, 5, ck, entrada, placar, stats=stats, sh=sh, sa=sa, fav_final=fav_final, odd_h=odd_h, odd_a=odd_a), marca=key, home=h, away=a)
+                if mid:
+                    sent.add(key)
+                    total_env += 1
+                    registrar_sinal(fid, ck, h, a, mid)
 
     save_sent(sent)
     return sent, total_env
