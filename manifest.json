@@ -8,9 +8,10 @@
   "theme_color": "#1a1a2e",
   "icons": [
     {
-      "src": "bot_espn_logo.png",
-      "sizes": "512x512",
-      "type": "image/png"
+      "src": "icon.jpg",
+      "sizes": "1024x1024",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
     }
   ]
 }
