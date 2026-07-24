@@ -1,6 +1,7 @@
 {
   "geral": {
     "appm_min_por_time": "",
+    "appm_min_total": "",
     "media_gols_partida_min": "",
     "media_gols_ht_min": "",
     "media_gols_ft_min": "",
@@ -10,8 +11,7 @@
     "escanteios_minimos": "",
     "diferenca_gols_fav_max": "",
     "max_red_card_fav": "",
-    "btts_probabilidade_min": "",
-    "appm_min_total": ""
+    "btts_probabilidade_min": ""
   },
   "mercados": {
     "over_05_ht": {
@@ -27,7 +27,6 @@
         "escanteios_minimos": 2,
         "max_red_card_fav": 0,
         "diferenca_gols_fav_max": 0,
-        "btts_probabilidade_min": 50,
         "situacao_favorito": "empatando"
       }
     },
@@ -40,7 +39,6 @@
       "criterios": {
         "appm_min_por_time": 0.8,
         "media_gols_partida_min": 2.25,
-        "media_gols_ft_min": 1.2,
         "chutes_alvo_min": 4,
         "chutes_totais_min": 10,
         "escanteios_minimos": 4,
@@ -54,14 +52,12 @@
       "minuto_inicio": 60,
       "minuto_fim": 75,
       "periodo": 2,
-      "placar_valido": 1,
       "criterios": {
         "appm_min_por_time": 0.8,
         "media_gols_partida_min": 2.25,
-        "media_gols_ft_min": 1.2,
         "chutes_alvo_min": 4,
         "chutes_totais_min": 10,
-        "escanteios_minimos": 2,
+        "escanteios_minimos": 3,
         "max_red_card_fav": 0,
         "diferenca_gols_fav_max": 1,
         "situacao_favorito": "perdendo"
@@ -75,7 +71,7 @@
       "criterios": {
         "appm_min_por_time": 0.8,
         "media_gols_partida_min": 2.25,
-        "media_gols_ft_min": 1.2,
+        "media_gols_ft_min": 1,
         "chutes_alvo_min": 5,
         "chutes_totais_min": 10,
         "escanteios_minimos": 4,
@@ -104,7 +100,6 @@
       "periodo": 2,
       "criterios": {
         "appm_min_por_time": 0.7,
-        "media_gols_ft_min": 1,
         "chutes_alvo_min": 4,
         "chutes_totais_min": 9,
         "escanteios_minimos": 4,
