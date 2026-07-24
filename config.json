@@ -1,9 +1,22 @@
 {
-  "geral": {},
+  "geral": {
+    "appm_min_por_time": "",
+    "appm_min_total": "",
+    "media_gols_partida_min": "",
+    "media_gols_ht_min": "",
+    "media_gols_ft_min": "",
+    "chutes_alvo_min": "",
+    "chutes_totais_min": "",
+    "ataques_perigosos_min": "",
+    "escanteios_minimos": "",
+    "diferenca_gols_fav_max": "",
+    "max_red_card_fav": "",
+    "btts_probabilidade_min": ""
+  },
   "mercados": {
     "over_05_ht": {
       "ativo": true,
-      "minuto_inicio": 15,
+      "minuto_inicio": 14,
       "minuto_fim": 27,
       "periodo": 1,
       "criterios": {
@@ -78,9 +91,7 @@
       "periodo": 1,
       "criterios": {
         "appm_min_por_time": 0.7,
-        "chutes_alvo_min": 2,
         "chutes_totais_min": 6,
-        "escanteios_minimos": 2,
         "max_red_card_fav": 0,
         "diferenca_gols_fav_max": 1,
         "situacao_favorito": "perdendo_ou_empatando"
