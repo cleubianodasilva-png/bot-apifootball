@@ -1,4 +1,4 @@
-const CACHE_NAME = 'greens-vip-v4';
+const CACHE_NAME = 'painel-robos-v6';
 const ASSETS = [
   'index.html',
   'painel.html',
