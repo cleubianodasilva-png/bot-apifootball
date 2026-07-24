@@ -49,7 +49,7 @@ body {
   font-size:16px;
   outline:none;
   transition:border-color .3s;
-  margin-bottom:16px;
+  margin-bottom:12px;
 }
 .login-box input:focus {
   border-color:#d48821;
@@ -64,6 +64,7 @@ body {
   font-weight:700;
   cursor:pointer;
   transition:opacity .3s;
+  margin-top:4px;
 }
 .login-box button:hover { opacity:.9; }
 .login-box button:active { opacity:.7; }
@@ -80,36 +81,43 @@ body {
 <div class="login-box">
   <img src="icon-192.png" alt="PAINEL">
   <h1>🔐 PAINEL DE ROBÔS</h1>
-  <p>Digite a senha para acessar o painel</p>
+  <p>Acesse com usuário e senha</p>
+  <input type="text" id="usuario" placeholder="Usuário" autocomplete="off" enterkeyhint="next">
   <input type="password" id="senha" placeholder="Senha" autocomplete="off" enterkeyhint="go">
   <button onclick="entrar()">ENTRAR</button>
-  <div class="erro" id="erro">🔒 Senha incorreta</div>
+  <div class="erro" id="erro">🔒 Usuário ou senha incorretos</div>
 </div>
 
 <script>
 (function(){
-  // Verifica se já logou na sessão
   if(sessionStorage.getItem('logado') === 'true'){
     window.location.href = 'painel.html';
     return;
   }
-  const input = document.getElementById('senha');
-  input.addEventListener('keydown', function(e){
+  const userInput = document.getElementById('usuario');
+  const passInput = document.getElementById('senha');
+  userInput.addEventListener('keydown', function(e){
+    if(e.key === 'Enter') { e.preventDefault(); passInput.focus(); }
+  });
+  passInput.addEventListener('keydown', function(e){
     if(e.key === 'Enter') entrar();
   });
-  input.focus();
+  userInput.focus();
 })();
 
 function entrar(){
+  const usuario = document.getElementById('usuario').value;
   const senha = document.getElementById('senha').value;
-  const codigo = btoa(senha);
-  if(codigo === 'QEJpYW5vMzIx'){
+  const userOk = btoa(usuario) === 'bWFxdWluYWRlZ3JlZW5zdmlw';
+  const passOk = btoa(senha) === 'QEJpYW5vMzIx';
+  if(userOk && passOk){
     sessionStorage.setItem('logado', 'true');
     window.location.href = 'painel.html';
   } else {
     document.getElementById('erro').classList.add('mostrar');
+    document.getElementById('usuario').value = '';
     document.getElementById('senha').value = '';
-    document.getElementById('senha').focus();
+    document.getElementById('usuario').focus();
   }
 }
 </script>
