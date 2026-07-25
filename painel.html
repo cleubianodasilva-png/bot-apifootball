@@ -516,7 +516,7 @@ async function loadConfig(){
     customMarketCount = 0;
     Object.entries(merc).forEach(([key, md]) => {
       if (['over_05_ht','ambas_marcam','over_15_ft','over_gol_partida','escanteio_ht','escanteio_ft'].includes(key)) return;
-      criarCardCustomMarket(md.nome || key, md);
+      criarCardCustomMarket(md.nome || key, md, key);
     });
     // Carrega performance
     await carregarPerformance();
@@ -537,6 +537,7 @@ function criarCardCustomMarket(nome, dados, perfKey) {
   const card = document.createElement('div');
   card.className = 'card';
   card.id = 'card-' + pref;
+  card.dataset.perfKey = perfId;
   card.style.border = '1px solid #8e44ad';
 
   const ativo = (dados && dados.ativo !== false);
@@ -668,6 +669,28 @@ async function carregarPerformance(){
       const pct_g=total>0?(green/total*100):0;
       const pct_r=total>0?(red/total*100):0;
       el.innerHTML=`
+        <div class="bar-wrap"><div class="bar-green" style="width:${pct_g}%"></div><div class="bar-red" style="width:${pct_r}%"></div></div>
+        <div class="stats">
+          <span class="green">🟢${green}</span> <span class="red">🔴${red}</span>
+          <span class="taxa">📊${taxa}%</span> <span class="total">(${total})</span>
+        </div>`;
+    });
+    // Carrega performance dos mercados personalizados
+    document.querySelectorAll('#custom-markets-container .card').forEach(card => {
+      const perfKey = card.dataset.perfKey;
+      if (!perfKey) return;
+      const p = perf[perfKey];
+      const pref = card.id.replace('card-', '');
+      const el = document.getElementById('perf-'+pref);
+      if (!el) return;
+      if (!p) { el.innerHTML = ''; return; }
+      const total = p.total||1;
+      const green = p.green||0;
+      const red = p.red||0;
+      const taxa = total>0?((green/total)*100).toFixed(1):'0.0';
+      const pct_g = total>0?(green/total*100):0;
+      const pct_r = total>0?(red/total*100):0;
+      el.innerHTML = `
         <div class="bar-wrap"><div class="bar-green" style="width:${pct_g}%"></div><div class="bar-red" style="width:${pct_r}%"></div></div>
         <div class="stats">
           <span class="green">🟢${green}</span> <span class="red">🔴${red}</span>
