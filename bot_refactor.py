@@ -619,6 +619,18 @@ def get_performance():
             "nome": nome, "green": greens, "red": reds,
             "total": total, "pct": pct, "valido": valido
         }
+    # Inclui mercados personalizados que têm performance
+    for cod, p in perf.items():
+        if cod.startswith("custom_") and cod not in resultado:
+            total = p["total"]
+            greens = p["green"]
+            reds = p["red"]
+            pct = (greens / total * 100) if total > 0 else 0
+            valido = total >= 1000 and pct >= 70
+            resultado[cod] = {
+                "nome": cod, "green": greens, "red": reds,
+                "total": total, "pct": pct, "valido": valido
+            }
     return resultado
 
 def gerar_layout_performance():
@@ -671,6 +683,7 @@ def get_performance_24h():
     for cod, nome in MAPA_MERCADO.items():
         perf[cod] = {"nome": nome, "green": 0, "red": 0, "total": 0}
     
+    # Inclui mercados personalizados com registros
     for r in registros:
         ts_str = r.get("timestamp", "")
         mercado = r.get("mercado", "")
@@ -678,7 +691,8 @@ def get_performance_24h():
         if not ts_str or not mercado or not resultado:
             continue
         if mercado not in perf:
-            continue
+            # Cria entrada dinâmica pra mercado personalizado
+            perf[mercado] = {"nome": mercado, "green": 0, "red": 0, "total": 0}
         try:
             ts = datetime.fromisoformat(ts_str)
             if ts.tzinfo is None:
